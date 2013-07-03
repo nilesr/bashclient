@@ -154,9 +154,7 @@ function networks-reconfigure {
 	autoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
 	test autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
 	usedefault=`prompt-for "Use default nickname, etc? [Y] "`
-	test usedefault == "y" && cp $CONFDIR/default/* $CONFDIR/networks/$netname 
-	test usedefault == "y" || ( read -p "What nick do you want to use for this network? " customnick ; echo $customnick | tee $CONFDIR/networks/$netname/nickname; read -p "What username do you want to use for this network? " customuser; echo $customuser | tee $CONFDIR/networks/$netname/username; read -p "What realname do you want to use for this network? " customreal; echo $customreal | tee $CONFDIR/networks/$netname/realname; )
-	netname=
+	test usedefault == "y" || ( read -p "What nick do you want to use for this network? " customnick ; echo $customnick | tee $CONFDIR/networks/$netname/nickname &>/dev/null; read -p "What username do you want to use for this network? " customuser; echo $customuser | tee $CONFDIR/networks/$netname/username &>/dev/null; read -p "What realname do you want to use for this network? " customreal; echo $customreal | tee $CONFDIR/networks/$netname/realname &>/dev/null ) && cp $CONFDIR/default/* $CONFDIR/networks/$netname 
 }
 function askfornewnetwork {
 	createnew=
@@ -211,7 +209,7 @@ while true; do
 	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
-	test $basecommand == "networks" && networks
+	test $basecommand == "networks" || test $basecommand == "servers" && networks
 	
 	rawcommand=
 	command=
