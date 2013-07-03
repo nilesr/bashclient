@@ -100,33 +100,50 @@ function networks {
 		cat $CONFDIR/autoconnect
 		;;
 		change-defaults)
-		reconfigure-defaults
+		change-defaults
+		;;
+		get-defaults)
+		get-defaults
 		;;
 		*)
 		echo "USAGE: /networks <option>"
 		echo "Possible options"
 		echo "----------------"
 		echo "reconfigure: 		Change settings on a network"
-		echo "change-defaults:	Change default settings"
 		echo "create: 		Create a new network"
 		echo "list: 			List all networks available"
 		echo "list-auto: 		List all networks automatically connected"
+		echo "change-defaults:	Change default settings"
+		echo "get-defaults:		Get default settings"
 		;;
 	esac
 	argument=
 }
-function reconfigure-defaults {
-	:
+function change-defaults {
+	read -p "Current default nickname is `cat $CONFDIR/default/nickname`. [`cat $CONFDIR/default/nickname`] " newdefnick
+	test -n $newdefnick || newdefnick=`cat $CONFDIR/default/nickname`
+	echo $newdefnick > $CONFDIR/default/nickname
+	read -p "Current default username is `cat $CONFDIR/default/username`. [`cat $CONFDIR/default/username`] " newdefuser
+	test -n $newdefuser || newdefuser=`cat $CONFDIR/default/username`
+	echo $newdefuser > $CONFDIR/default/nickname
+	read -p "Current default realname is `cat $CONFDIR/default/realname`. [`cat $CONFDIR/default/realname`] " newdefreal
+	test -n $newdefreal || newdefreal=`cat $CONFDIR/default/realname`
+	echo $newdefreal > $CONFDIR/default/nickname
+}
+function get-defaults {
+	echo "Current default nickname is `cat $CONFDIR/default/nickname`."
+	echo "Current default username is `cat $CONFDIR/default/username`."
+	echo "Current default realname is `cat $CONFDIR/default/realname`."
 }
 function prompt-for {
 	read -p "$1" toreturn
-	test -n $toreturn || toreturn="y"
+	test -n "$toreturn" || toreturn="y"
 	toreturn=`echo "$toreturn" | awk '{print tolower($0)}'`
 	toreturn=${toreturn:0:1}
 	echo $toreturn
 }
 function networks-reconfigure {
-	test -s "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname )
+	test -n "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname )
 	test -d $CONFDIR/networks/$netname || ( echo "That network doesn't exist"; continue )
 	netaddr=
 	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
@@ -135,9 +152,10 @@ function networks-reconfigure {
 	netaddr=
 	autoconnect=
 	autoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
-	test autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect || echo "Failed to create, you probably can't write to the configuration directory"; exit 1 ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
+	test autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
 	usedefault=`prompt-for "Use default nickname, etc? [Y] "`
-	test usedefault == "y" && ( cp $CONFDIR/default/* $CONFDIR/networks/$netname ) || (read -p "What nick do you want to use for this network? " custom-nick ; echo $custom-nick | tee $CONFDIR/networks/$netname/nickname; read -p "What username do you want to use for this network? " custom-user; echo $custom-user | tee $CONFDIR/networks/$netname/username; read -p "What realname do you want to use for this network? " custom-real; echo $custom-real | tee $CONFDIR/networks/$netname/realname; )
+	test usedefault == "y" && cp $CONFDIR/default/* $CONFDIR/networks/$netname 
+	test usedefault == "y" || ( read -p "What nick do you want to use for this network? " custom-nick ; echo $custom-nick | tee $CONFDIR/networks/$netname/nickname; read -p "What username do you want to use for this network? " custom-user; echo $custom-user | tee $CONFDIR/networks/$netname/username; read -p "What realname do you want to use for this network? " custom-real; echo $custom-real | tee $CONFDIR/networks/$netname/realname; )
 	netname=
 }
 function askfornewnetwork {
@@ -150,7 +168,7 @@ function newnetwork {
 	createnew=
 	read -p "Enter the name for the network: " newnetname
 	mkdir -p $CONFDIR/networks/$newnetname || ( echo "Failed to create, you probably can't write to the configuration directory"; exit 1 )
-	cp $CONFDIR/default/* $CONFDIR/networks/$netname
+	cp $CONFDIR/default/* $CONFDIR/networks/$newnetname
 	newnetaddr=
 	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
 	read newnetaddr
@@ -168,14 +186,15 @@ mkdir -p $CONFDIR/networks &>/dev/null
 mkdir -p $CONFDIR/default &>/dev/null
 test -s $CONFDIR/default/username || ( echo $USER | tee $CONFDIR/default/username ) &>/dev/null
 test -s $CONFDIR/default/realname || ( echo $USER | tee $CONFDIR/default/realname ) &>/dev/null
+touch $CONFDIR/autoconnect &>/dev/null
 test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname=)
 
 test "`ls -A $CONFDIR/networks`" || askfornewnetwork
 
-for networktoconnect in `cat $CONFDIR/autoconnect`; do
-	connect `cat $CONFDIR/networks/$networktoconnect/addresses` `cat $CONFDIR/networks/$networktoconnect/nickname` `cat $CONFDIR/networks/$networktoconnect/username` `cat $CONFDIR/networks/$networktoconnect/realname`
-	networktoconnect=
-done
+#for networktoconnect in `cat $CONFDIR/autoconnect`; do
+#	connect `head -n 1 $CONFDIR/networks/$networktoconnect/addresses` `cat $CONFDIR/networks/$networktoconnect/nickname` `cat $CONFDIR/networks/$networktoconnect/username` `cat $CONFDIR/networks/$networktoconnect/realname`
+#	networktoconnect=
+#done
 # User input loop
 while true; do
 	read rawcommand
