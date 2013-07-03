@@ -13,6 +13,13 @@ function closeprogram {
 	exit
 }
 trap "closeprogram  &>/dev/null & exit" SIGINT SIGTERM
+function prompt-for {
+	read -p "$1" toreturn
+	test -n "$toreturn" || toreturn="y"
+	toreturn=`echo "$toreturn" | awk '{print tolower($0)}'`
+	toreturn=${toreturn:0:1}
+	echo $toreturn
+}
 function connectionloop {
 	sleep 1
 	echo "NICK $1" >&3
@@ -40,8 +47,14 @@ function connectionloop {
 	done <&3 &
 	echo $! | tee $CONFDIR/client.pid
 }
-function message {
-	echo "PRIVMSG `echo $command[1]` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+
+function sendmessage {
+	test -n $activewindow || echo "No channel joined" && echo "PRIVMSG $activewindow :$rawcommand" >&3
+}
+function privmsg {
+	test -n ${command[1]} || echo -n "USAGE: /msg <nickname>. "
+	test -n ${command[2]} || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+	echo ""
 }
 function joinchannel {
 	test -n ${command[2]} || chanpass=${command[2]}
@@ -58,17 +71,11 @@ function partchannel {
 	echo Left channel "$topart".
 	topart=
 }
-function sendmessage {
-	test -n $activewindow || echo "No channel joined" && echo "PRIVMSG $activewindow :$rawcommand" >&3
-}
+
 function query {
 	test -n ${command[1]} || echo "USAGE: /query <nickname>" && activewindow=${command[1]}
 }
-function privmsg {
-	test -n ${command[1]} || echo -n "USAGE: /msg <nickname>. "
-	test -n ${command[2]} || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
-	echo ""
-}
+
 function connect {
 	socketaddr=$1
 	test -n $socketaddr || ( echo "Please specify a server"; continue )
@@ -119,29 +126,7 @@ function networks {
 	esac
 	argument=
 }
-function change-defaults {
-	read -p "Current default nickname is `cat $CONFDIR/default/nickname`. [`cat $CONFDIR/default/nickname`] " newdefnick
-	test -n $newdefnick || newdefnick=`cat $CONFDIR/default/nickname`
-	echo $newdefnick > $CONFDIR/default/nickname
-	read -p "Current default username is `cat $CONFDIR/default/username`. [`cat $CONFDIR/default/username`] " newdefuser
-	test -n $newdefuser || newdefuser=`cat $CONFDIR/default/username`
-	echo $newdefuser > $CONFDIR/default/username
-	read -p "Current default realname is `cat $CONFDIR/default/realname`. [`cat $CONFDIR/default/realname`] " newdefreal
-	test -n $newdefreal || newdefreal=`cat $CONFDIR/default/realname`
-	echo $newdefreal > $CONFDIR/default/realname
-}
-function get-defaults {
-	echo "Current default nickname is `cat $CONFDIR/default/nickname`."
-	echo "Current default username is `cat $CONFDIR/default/username`."
-	echo "Current default realname is `cat $CONFDIR/default/realname`."
-}
-function prompt-for {
-	read -p "$1" toreturn
-	test -n "$toreturn" || toreturn="y"
-	toreturn=`echo "$toreturn" | awk '{print tolower($0)}'`
-	toreturn=${toreturn:0:1}
-	echo $toreturn
-}
+
 function networks-reconfigure {
 	test -n "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname )
 	test -d $CONFDIR/networks/$netname || ( echo "That network doesn't exist"; continue )
@@ -178,6 +163,24 @@ function newnetwork {
 	echo "Continue configuration with /networks reconfigure $newnetname"
 	newnetname=
 }
+function change-defaults {
+	read -p "Current default nickname is `cat $CONFDIR/default/nickname`. [`cat $CONFDIR/default/nickname`] " newdefnick
+	test -n $newdefnick || newdefnick=`cat $CONFDIR/default/nickname`
+	echo $newdefnick > $CONFDIR/default/nickname
+	read -p "Current default username is `cat $CONFDIR/default/username`. [`cat $CONFDIR/default/username`] " newdefuser
+	test -n $newdefuser || newdefuser=`cat $CONFDIR/default/username`
+	echo $newdefuser > $CONFDIR/default/username
+	read -p "Current default realname is `cat $CONFDIR/default/realname`. [`cat $CONFDIR/default/realname`] " newdefreal
+	test -n $newdefreal || newdefreal=`cat $CONFDIR/default/realname`
+	echo $newdefreal > $CONFDIR/default/realname
+}
+function get-defaults {
+	echo "Current default nickname is `cat $CONFDIR/default/nickname`."
+	echo "Current default username is `cat $CONFDIR/default/username`."
+	echo "Current default realname is `cat $CONFDIR/default/realname`."
+}
+
+
 # Configuration check
 CONFDIR=~/.bashclient
 mkdir -p $CONFDIR/networks &>/dev/null
@@ -205,7 +208,7 @@ while true; do
 	test $basecommand == "join" || test $basecommand == "j" && joinchannel
 	test $basecommand == "part" && partchannel
 	test $basecommand == "query" && query
-	test $basecommand == "eval" && $basecommand
+	test $basecommand == "eval" && `$basecommand`
 	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
