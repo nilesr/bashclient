@@ -70,12 +70,12 @@ function privmsg {
 	echo ""
 }
 function connect {
-	test -n $1 || ( echo "Please specify a server"; continue )
-
-	test -n $2 || socketport=6667
-	test -n $2 && socketport=$2
-
-	exec 3<>/dev/tcp/$1/$socketport
+	socketaddr=$1
+	test -n $socketaddr || ( echo "Please specify a server"; continue )
+	test -n $2 && socketport=$2 || socketport=6667
+	test -d $CONFDIR/networks/$1 && ( socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`; socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1` )
+	
+	exec 3<>/dev/tcp/$socketaddr/$socketport
 	socketport=
 	connectionloop $3 $4 $5
 }
@@ -125,10 +125,10 @@ function change-defaults {
 	echo $newdefnick > $CONFDIR/default/nickname
 	read -p "Current default username is `cat $CONFDIR/default/username`. [`cat $CONFDIR/default/username`] " newdefuser
 	test -n $newdefuser || newdefuser=`cat $CONFDIR/default/username`
-	echo $newdefuser > $CONFDIR/default/nickname
+	echo $newdefuser > $CONFDIR/default/username
 	read -p "Current default realname is `cat $CONFDIR/default/realname`. [`cat $CONFDIR/default/realname`] " newdefreal
 	test -n $newdefreal || newdefreal=`cat $CONFDIR/default/realname`
-	echo $newdefreal > $CONFDIR/default/nickname
+	echo $newdefreal > $CONFDIR/default/realname
 }
 function get-defaults {
 	echo "Current default nickname is `cat $CONFDIR/default/nickname`."
@@ -155,7 +155,7 @@ function networks-reconfigure {
 	test autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
 	usedefault=`prompt-for "Use default nickname, etc? [Y] "`
 	test usedefault == "y" && cp $CONFDIR/default/* $CONFDIR/networks/$netname 
-	test usedefault == "y" || ( read -p "What nick do you want to use for this network? " custom-nick ; echo $custom-nick | tee $CONFDIR/networks/$netname/nickname; read -p "What username do you want to use for this network? " custom-user; echo $custom-user | tee $CONFDIR/networks/$netname/username; read -p "What realname do you want to use for this network? " custom-real; echo $custom-real | tee $CONFDIR/networks/$netname/realname; )
+	test usedefault == "y" || ( read -p "What nick do you want to use for this network? " customnick ; echo $customnick | tee $CONFDIR/networks/$netname/nickname; read -p "What username do you want to use for this network? " customuser; echo $customuser | tee $CONFDIR/networks/$netname/username; read -p "What realname do you want to use for this network? " customreal; echo $customreal | tee $CONFDIR/networks/$netname/realname; )
 	netname=
 }
 function askfornewnetwork {
@@ -187,7 +187,7 @@ mkdir -p $CONFDIR/default &>/dev/null
 test -s $CONFDIR/default/username || ( echo $USER | tee $CONFDIR/default/username ) &>/dev/null
 test -s $CONFDIR/default/realname || ( echo $USER | tee $CONFDIR/default/realname ) &>/dev/null
 touch $CONFDIR/autoconnect &>/dev/null
-test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname=)
+test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname= )
 
 test "`ls -A $CONFDIR/networks`" || askfornewnetwork
 
@@ -195,6 +195,7 @@ test "`ls -A $CONFDIR/networks`" || askfornewnetwork
 #	connect `head -n 1 $CONFDIR/networks/$networktoconnect/addresses` `cat $CONFDIR/networks/$networktoconnect/nickname` `cat $CONFDIR/networks/$networktoconnect/username` `cat $CONFDIR/networks/$networktoconnect/realname`
 #	networktoconnect=
 #done
+
 # User input loop
 while true; do
 	read rawcommand
@@ -207,7 +208,7 @@ while true; do
 	test $basecommand == "part" && partchannel
 	test $basecommand == "query" && query
 	test $basecommand == "eval" && $basecommand
-	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]} `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
+	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
 	test $basecommand == "networks" && networks
