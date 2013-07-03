@@ -33,7 +33,7 @@ function connectionloop {
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
 		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "PRIVMSG RouterIsaCactus :`echo $rawline`" >&3
+		test ${line[1]} == "001" && echo "Connected: `echo $rawline | awk '{print substr($0, index($0,$3))}'`"
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
@@ -84,7 +84,7 @@ function connect {
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
 	socketport=
-	connectionloop $3 $4 $5
+	connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
 }
 function nick {
 	test -n ${command[1]} || ( echo $nickname; return )
@@ -191,11 +191,6 @@ touch $CONFDIR/autoconnect &>/dev/null
 test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname= )
 
 test "`ls -A $CONFDIR/networks`" || askfornewnetwork
-
-#for networktoconnect in `cat $CONFDIR/autoconnect`; do
-#	connect `head -n 1 $CONFDIR/networks/$networktoconnect/addresses` `cat $CONFDIR/networks/$networktoconnect/nickname` `cat $CONFDIR/networks/$networktoconnect/username` `cat $CONFDIR/networks/$networktoconnect/realname`
-#	networktoconnect=
-#done
 
 # User input loop
 while true; do
