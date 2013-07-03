@@ -1,0 +1,200 @@
+function quit {
+	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
+	echo "QUIT :`echo $rawcommand | awk '{print substr($0, index($0,$2))}'`" >&3
+	echo Link broken, connection closed.
+}
+function closeprogram {
+	( quit
+	sleep 2
+	test -s client.pid && kill `cat $CONFDIR/client.pid`
+	rm $CONFDIR/client.pid
+	cat $CONFDIR/autoconnect | sort | uniq | tee $CONFDIR/autoconnect.temp
+	mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect ) &>/dev/null &
+	exit
+}
+trap "closeprogram  &>/dev/null & exit" SIGINT SIGTERM
+function connectionloop {
+	sleep 1
+	echo "NICK $1" >&3
+	echo "USER $2 8 * :$3" >&3
+	# Server output loop
+	while read rawline; do
+		line=
+		echo "$rawline" | tee -a $CONFDIR/client.log &> /dev/null
+		line=( $rawline )
+		test -n ${line[0]} || continue # If the server sends an empty line, ignore the line
+		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
+		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
+		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
+		test ${line[1]} == "001" && echo "PRIVMSG RouterIsaCactus :`echo $rawline`" >&3
+		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
+		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
+		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
+		privmsgtolog=`echo $rawline | sed -e 's/.*:/:/g' | awk '{print substr($1,2); }'`
+		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
+		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined ${line[2]}"
+		test ${line[1]} == "PART" && echo "$nicktodisplay has left ${line[2]}"
+		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: $privmsgtolog"
+
+
+	done <&3 &
+	echo $! | tee $CONFDIR/client.pid
+}
+function message {
+	echo "PRIVMSG `echo $command[1]` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+}
+function joinchannel {
+	test -n ${command[2]} || chanpass=${command[2]}
+	test -n $chanpass && echo "JOIN `echo ${command[1]}`" >&3 || echo "JOIN `echo ${command[1]}` `echo $chanpass`" >&3
+	chanpass=
+	activewindow=${command[1]}
+}
+function partchannel {
+	topart=
+	test -n ${command[1]} && topart=$activewindow || topart=${command[1]}
+	test $topart == $activewindow && activewindow=
+	test ${topart:0:1} != "#" && ( echo "USAGE: /part <channel>. You seem to be having problems with the <channel> bit."; return )
+	echo "PART `echo $topart` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+	echo Left channel "$topart".
+	topart=
+}
+function sendmessage {
+	test -n $activewindow || echo "No channel joined" && echo "PRIVMSG $activewindow :$rawcommand" >&3
+}
+function query {
+	test -n ${command[1]} || echo "USAGE: /query <nickname>" && activewindow=${command[1]}
+}
+function privmsg {
+	test -n ${command[1]} || echo -n "USAGE: /msg <nickname>. "
+	test -n ${command[2]} || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+	echo ""
+}
+function connect {
+	test -n $1 || ( echo "Please specify a server"; continue )
+
+	test -n $2 || socketport=6667
+	test -n $2 && socketport=$2
+
+	exec 3<>/dev/tcp/$1/$socketport
+	socketport=
+	connectionloop $3 $4 $5
+}
+function nick {
+	test -n ${command[1]} || ( echo $nickname; return )
+	echo "NICK :"${command[1]} >&3
+	nickname=${command[1]}
+}
+function networks {
+	argument=`echo ${command[1]} | awk '{print tolower($0)}'`
+	case $argument in
+		reconfigure)
+		networks-reconfigure ${command[2]}
+		;;
+		create)
+		newnetwork
+		;;
+		list)
+		ls -1 $CONFDIR/networks
+		;;
+		list-auto)
+		cat $CONFDIR/autoconnect
+		;;
+		change-defaults)
+		reconfigure-defaults
+		;;
+		*)
+		echo "USAGE: /networks <option>"
+		echo "Possible options"
+		echo "----------------"
+		echo "reconfigure: 		Change settings on a network"
+		echo "change-defaults:	Change default settings"
+		echo "create: 		Create a new network"
+		echo "list: 			List all networks available"
+		echo "list-auto: 		List all networks automatically connected"
+		;;
+	esac
+	argument=
+}
+function reconfigure-defaults {
+	:
+}
+function prompt-for {
+	read -p "$1" toreturn
+	test -n $toreturn || toreturn="y"
+	toreturn=`echo "$toreturn" | awk '{print tolower($0)}'`
+	toreturn=${toreturn:0:1}
+	echo $toreturn
+}
+function networks-reconfigure {
+	test -s "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname )
+	test -d $CONFDIR/networks/$netname || ( echo "That network doesn't exist"; continue )
+	netaddr=
+	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
+	read netaddr
+	test -n `echo $netaddr | awk '{print $2}'` || ( echo $netaddr 6667 | tee -a $CONFDIR/networks/$netname/addresses ) && ( echo $netaddr | tee -a $CONFDIR/networks/$netname/addresses ) &>/dev/null
+	netaddr=
+	autoconnect=
+	autoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
+	test autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect || echo "Failed to create, you probably can't write to the configuration directory"; exit 1 ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
+	usedefault=`prompt-for "Use default nickname, etc? [Y] "`
+	test usedefault == "y" && ( cp $CONFDIR/default/* $CONFDIR/networks/$netname ) || (read -p "What nick do you want to use for this network? " custom-nick ; echo $custom-nick | tee $CONFDIR/networks/$netname/nickname; read -p "What username do you want to use for this network? " custom-user; echo $custom-user | tee $CONFDIR/networks/$netname/username; read -p "What realname do you want to use for this network? " custom-real; echo $custom-real | tee $CONFDIR/networks/$netname/realname; )
+	netname=
+}
+function askfornewnetwork {
+	createnew=
+	createnew=`prompt-for "Would you like to setup a new network now? [Y] "`
+	test $createnew == "y" && newnetwork || echo "You can always create a new network with /networks create"
+}
+function newnetwork {
+	export createnew=
+	createnew=
+	read -p "Enter the name for the network: " newnetname
+	mkdir -p $CONFDIR/networks/$newnetname || ( echo "Failed to create, you probably can't write to the configuration directory"; exit 1 )
+	cp $CONFDIR/default/* $CONFDIR/networks/$netname
+	newnetaddr=
+	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
+	read newnetaddr
+	test -n `echo $newnetaddr | awk '{print $2}'` || ( echo "$newnetaddr 6667" | tee $CONFDIR/networks/$newnetname/addresses; exit 1 ) && ( echo "$newnetaddr" | tee $CONFDIR/networks/$newnetname/addresses ) &>/dev/null
+	newnetaddr=
+	newautoconnect=
+	newautoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
+	test $newautoconnect == "y" && ( echo $newnetname | tee -a $CONFDIR/autoconnect || echo "Failed to create, you probably can't write to the configuration directory"; exit 1 ) &>/dev/null
+	echo "Continue configuration with /networks reconfigure $newnetname"
+	newnetname=
+}
+# Configuration check
+CONFDIR=~/.bashclient
+mkdir -p $CONFDIR/networks &>/dev/null
+mkdir -p $CONFDIR/default &>/dev/null
+test -s $CONFDIR/default/username || ( echo $USER | tee $CONFDIR/default/username ) &>/dev/null
+test -s $CONFDIR/default/realname || ( echo $USER | tee $CONFDIR/default/realname ) &>/dev/null
+test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname=)
+
+test "`ls -A $CONFDIR/networks`" || askfornewnetwork
+
+for networktoconnect in `cat $CONFDIR/autoconnect`; do
+	connect `cat $CONFDIR/networks/$networktoconnect/addresses` `cat $CONFDIR/networks/$networktoconnect/nickname` `cat $CONFDIR/networks/$networktoconnect/username` `cat $CONFDIR/networks/$networktoconnect/realname`
+	networktoconnect=
+done
+# User input loop
+while true; do
+	read rawcommand
+	test ${rawcommand:0:1} == "/" || sendmessage  # If the first character in the rawcommand is not a /, send it to the channel and skip the rest of the loop, otherwise continue with the loop
+	command=( $rawcommand )
+	basecommand=`echo ${command[0]} | awk '{print tolower(substr($1,2)); }'`
+	test $basecommand == "quit" || test $basecommand == "q" || test $basecommand == "disconnect" && quit
+	test $basecommand == "msg" || test $basecommand == "privmsg" || test $basecommand == "tell" && privmsg
+	test $basecommand == "join" || test $basecommand == "j" && joinchannel
+	test $basecommand == "part" && partchannel
+	test $basecommand == "query" && query
+	test $basecommand == "eval" && $basecommand
+	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]} `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
+	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
+	test $basecommand == "nick" && nick
+	test $basecommand == "networks" && networks
+	
+	rawcommand=
+	command=
+	basecommand=
+done
+
