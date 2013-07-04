@@ -27,6 +27,9 @@ function substring-2 {
 function substring-3 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$3))}'; toparse=
 }
+function substring-4 {
+	read toparse; echo $toparse | awk '{print substr($0, index($0,$4))}'; toparse=
+}
 function connectionloop {
 	sleep 1
 	echo "NICK $1" >&3
@@ -40,8 +43,9 @@ function connectionloop {
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
 		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-3`" # Display a message when connected
-		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-3`" # Tell me what I'm doing wrong
+		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4`" # Display a message when connected
+		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
+		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section available
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
@@ -91,13 +95,15 @@ function connect {
 	test -d $CONFDIR/networks/$1 && vianet="y" || vianet="n"
 	test $vianet == "y" && socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`
 	test $vianet == "y" && socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1`
-	test -n $socketport || socketport="6667"
+	test $vianet == "n" && test -n $2 && socketport=$2
+	test -n $2 || socketport="6667"
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
+	test $vianet == "n" && connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
+	test $vianet == "y" && connectionloop `cat $CONFDIR/networks/$1/nickname` `cat $CONFDIR/networks/$1/username` `cat $CONFDIR/networks/$1/realname`
 	vianetwork=
 	socketport=
 	socketaddr=
-	connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
 }
 function nick {
 	test -n ${command[1]} || ( echo $nickname; return )
@@ -204,7 +210,7 @@ function help {
 		disconnect)
 			echo "USAGE: 		/quit"
 			echo "DESCRIPTION: 	Disconnects you from your active IRC connection, but keeps the application open"
-			echo "ALIASES: 		/q, /disconnect"
+			echo "ALIASES: 	/q, /disconnect"
 		;;
 		msg)
 		;&
@@ -213,21 +219,21 @@ function help {
 		tell)
 			echo "USAGE: 		/msg <nick> <text>"
 			echo "DESCRIPTION: 	Sends a private message to <nick> containing <text>"
-			echo "ALIASES: 		/privmsg, /tell"
+			echo "ALIASES: 	/privmsg, /tell"
 		;;
 		join)
 		;&
 		j)
 			echo "USAGE: 		/join <channel> [key]"
 			echo "DESCRIPTION: 	Joins a specific <channel>, with a [key] word if requierd"
-			echo "ALIASES: 		/j"
+			echo "ALIASES: 	/j"
 		;;
 		part)
 		;&
 		p)
 			echo "USAGE: 		/part <channel>"
 			echo "DESCRIPTION: 	Leaves a specific channel"
-			echo "ALIASES: 		/p"
+			echo "ALIASES: 	/p"
 		;;
 		query)
 			echo "USAGE: 		/query <nick>"
@@ -248,14 +254,14 @@ function help {
 		server)
 			echo "USAGE: 		/connect <addr | addr port | networkname>"
 			echo "DESCRIPTION: 	Connects you to a new active IRC connection, either by address, address and port or network name"
-			echo "ALIASES: 		/server"
+			echo "ALIASES: 	/server"
 		;;
 		close)
 		;&
 		exit)
 			echo "USAGE: 		/close"
 			echo "DESCRIPTION: 	Closes the application and all running IRC network sessions"
-			echo "ALIASES: 		/exit"
+			echo "ALIASES: 	/exit"
 		;;
 		nick)
 			echo "USAGE: 		/nick <new-nickname>"
@@ -273,18 +279,22 @@ function help {
 		ircquote)
 			echo "USAGE: 		/quote <direct string>"
 			echo "DESCRIPTION: 	Sends a <direct string> to the server"
-			echo "ALIASES:	 	/ircquote"
+			echo "ALIASES:	/ircquote"
 		;;
 		help)
 		;&
 		h)
 			echo "USAGE: 		/help [topic]"
 			echo "DESCRIPTION: 	Checks to see if [topic] has any help available, and if it does, give it to the user"
-			echo "ALIASES:	 	/h"
+			echo "ALIASES:	/h"
+		;;
+		helop)
+			echo "USAGE:		/helpop [topic]"
+			echo "DESCRIPTION:	Queries your currently connected server for help on a specific topic"
 		;;
 		*)
 			echo "USAGE: 		${command[0]} [topic]"
-			echo "COMMANDS:		quit, q, disconnect, msg, privmsg, tell, join, j, part, p, query, eval, eval-global, connect, server, close, exit, nick, networks, servers, quote, ircquote, help, h, helpop"
+			echo "COMMANDS:	quit, q, disconnect, msg, privmsg, tell, join, j, part, p, query, eval, eval-global, connect, server, close, exit, nick, networks, servers, quote, ircquote, help, h, helpop"
 		;;
 	esac
 }
