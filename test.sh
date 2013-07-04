@@ -175,7 +175,7 @@ function newnetwork {
 	newnetaddr=
 	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
 	read newnetaddr
-	test -n `echo $newnetaddr | awk '{print $2}'` || ( echo "$newnetaddr 6667" | tee $CONFDIR/networks/$newnetname/addresses; exit 1 ) && ( echo "$newnetaddr" | tee $CONFDIR/networks/$newnetname/addresses ) &>/dev/null
+	test -n "`echo $newnetaddr | awk '{print $2}'`" || ( echo "$newnetaddr 6667" | tee $CONFDIR/networks/$newnetname/addresses; exit 1 ) && ( echo "$newnetaddr" | tee $CONFDIR/networks/$newnetname/addresses ) &>/dev/null
 	newnetaddr=
 	newautoconnect=
 	newautoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
