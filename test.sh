@@ -1,6 +1,6 @@
 function quit {
 	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
-	echo "QUIT :`echo $rawcommand | awk '{print substr($0, index($0,$2))}'`" >&3
+	echo "QUIT :`substring-2 $rawcommand`" >&3
 	echo Link broken, connection closed.
 }
 function closeprogram {
@@ -20,6 +20,12 @@ function prompt-for {
 	toreturn=${toreturn:0:1}
 	echo $toreturn
 }
+function substring-2 {
+	echo "$@"|awk '{print substr($0, index($0,$2))}'
+}
+function substring-3 {
+	echo "$@"|awk '{print substr($0, index($0,$3))}'
+}
 function connectionloop {
 	sleep 1
 	echo "NICK $1" >&3
@@ -33,11 +39,12 @@ function connectionloop {
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
 		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "Connected: `echo $rawline | awk '{print substr($0, index($0,$3))}'`"
+		test ${line[1]} == "001" && echo "Connected: `substring-3 $rawline`"
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
-		privmsgtolog=`echo $rawline | sed -e 's/.*:/:/g' | awk '{print substr($1,2); }'`
+		privmsgtolog=`echo $rawline | sed -e 's/.*:/:/g'`
+		privmsgtolog=`substring-2 "$privmsgtolog"`
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined ${line[2]}"
 		test ${line[1]} == "PART" && echo "$nicktodisplay has left ${line[2]}"
@@ -53,7 +60,7 @@ function sendmessage {
 }
 function privmsg {
 	test -n ${command[1]} || echo -n "USAGE: /msg <nickname>. "
-	test -n ${command[2]} || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+	test -n ${command[2]} || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | substring-3`" >&3
 	echo ""
 }
 function joinchannel {
@@ -67,7 +74,7 @@ function partchannel {
 	test -n ${command[1]} && topart=$activewindow || topart=${command[1]}
 	test $topart == $activewindow && activewindow=
 	test ${topart:0:1} != "#" && ( echo "USAGE: /part <channel>. You seem to be having problems with the <channel> bit."; return )
-	echo "PART `echo $topart` :`echo $rawcommand | awk '{print substr($0, index($0,$3))}'`" >&3
+	echo "PART `echo $topart` :`echo $rawcommand | substring-3`" >&3
 	echo Left channel "$topart".
 	topart=
 }
@@ -208,7 +215,7 @@ while true; do
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
 	test $basecommand == "networks" || test $basecommand == "servers" && networks
-	
+	test $basecommand == "quote" && echo `substring-2 "$rawcommand" "3"` >&3
 	rawcommand=
 	command=
 	basecommand=
