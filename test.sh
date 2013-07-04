@@ -21,9 +21,6 @@ function prompt-for {
 	toreturn=${toreturn:0:1}
 	echo $toreturn
 }
-function substring-1 {
-	read toparse; echo $toparse | awk '{print substr($0, index($0,$1))}'; toparse=
-}
 function substring-2 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$2))}'; toparse=
 }
@@ -43,7 +40,8 @@ function connectionloop {
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
 		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-3`"
+		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-3`" # Display a message when connected
+		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-3`" # Tell me what I'm doing wrong
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
@@ -316,13 +314,13 @@ while true; do
 	test $basecommand == "join" || test $basecommand == "j" && joinchannel
 	test $basecommand == "part" || test $basecommand == "p" && partchannel
 	test $basecommand == "query" && query
-	test $basecommand == "eval" && ( eval `echo "$rawcommand" | substring-1` )
-	test $basecommand == "eval-global" && eval `echo "$rawcommand" | substring-1`
+	test $basecommand == "eval" && ( eval `echo "$rawcommand" | substring-2` )
+	test $basecommand == "eval-global" && eval `echo "$rawcommand" | substring-2`
 	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
 	test $basecommand == "networks" || test $basecommand == "servers" && networks
-	test $basecommand == "quote" || test $basecommand == "ircquote" && echo `echo $rawcommand | substring-3` >&3
+	test $basecommand == "quote" || test $basecommand == "ircquote" && echo `echo $rawcommand | substring-2` >&3
 	test $basecommand == "help" || test $basecommand == "h" && help ${command[1]}
 	test $basecommand == "helpop" && echo "HELP :`echo $rawcommand | substring-2`" >&3
 	rawcommand=
