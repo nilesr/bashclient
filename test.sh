@@ -314,7 +314,7 @@ while true; do
 	test $basecommand == "quit" || test $basecommand == "q" || test $basecommand == "disconnect" && quit
 	test $basecommand == "msg" || test $basecommand == "privmsg" || test $basecommand == "tell" && privmsg
 	test $basecommand == "join" || test $basecommand == "j" && joinchannel
-#	test $basecommand == "part" || $basecommand == "p" && partchannel
+	test $basecommand == "part" || test $basecommand == "p" && partchannel
 	test $basecommand == "query" && query
 	test $basecommand == "eval" && ( eval `echo "$rawcommand" | substring-1` )
 	test $basecommand == "eval-global" && eval `echo "$rawcommand" | substring-1`
@@ -322,8 +322,8 @@ while true; do
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
 	test $basecommand == "networks" || test $basecommand == "servers" && networks
-#	test $basecommand == "quote" || $basecommand == "ircquote" && echo `echo $rawcommand | substring-3` >&3
-#	test $basecommand == "help" || $basecommand == "h" && help ${command[1]}
+	test $basecommand == "quote" || test $basecommand == "ircquote" && echo `echo $rawcommand | substring-3` >&3
+	test $basecommand == "help" || test $basecommand == "h" && help ${command[1]}
 	test $basecommand == "helpop" && echo "HELP :`echo $rawcommand | substring-2`" >&3
 	rawcommand=
 	command=
