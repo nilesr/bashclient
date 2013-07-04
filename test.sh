@@ -21,6 +21,9 @@ function prompt-for {
 	toreturn=${toreturn:0:1}
 	echo $toreturn
 }
+function substring-1 {
+	read | awk '{print substr($0, index($0,$1))}'
+}
 function substring-2 {
 	read | awk '{print substr($0, index($0,$2))}'
 }
@@ -299,16 +302,18 @@ test "`ls -A $CONFDIR/networks`" || askfornewnetwork
 # User input loop
 while true; do
 	read rawcommand
+	test -n "$rawcommand" || continue # If the message is blank, ignore it
 	test ${rawcommand:0:1} == "/" || sendmessage  # If the first character in the rawcommand is not a /, send it to the channel and skip the rest of the loop, otherwise continue with the loop
 	command=( $rawcommand )
 	basecommand=`echo ${command[0]} | awk '{print tolower(substr($1,2)); }'`
+	test -n "$basecommand" || continue # If the message was just "/", ignore it
 	test $basecommand == "quit" || test $basecommand == "q" || test $basecommand == "disconnect" && quit
 	test $basecommand == "msg" || test $basecommand == "privmsg" || test $basecommand == "tell" && privmsg
 	test $basecommand == "join" || test $basecommand == "j" && joinchannel
 	test $basecommand == "part" || $basecommand == "p" && partchannel
 	test $basecommand == "query" && query
-	test $basecommand == "eval" && ( eval $basecommand )
-	test $basecommand == "eval-global" && eval $basecommand
+	test $basecommand == "eval" && ( eval `echo "$rawcommand" | substring-1` )
+	test $basecommand == "eval-global" && eval `echo "$rawcommand" | substring-1`
 	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
