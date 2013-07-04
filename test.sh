@@ -54,7 +54,7 @@ function connectionloop {
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined ${line[2]}"
 		test ${line[1]} == "PART" && echo "$nicktodisplay has left ${line[2]}"
 		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: $privmsgtolog"
-
+		test ${line[1]} == "NICK" && echo "$nicktodisplay is now known as: $privmsgtolog"
 
 	done <&3 &
 	echo $! | tee $CONFDIR/client.pid
@@ -96,7 +96,8 @@ function connect {
 	test $vianet == "y" && socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`
 	test $vianet == "y" && socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1`
 	test $vianet == "n" && test -n $2 && socketport=$2
-	test -n $2 || socketport="6667"
+	test -n "$socketport" || socketport="6667"
+	echo $socketport
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
 	test $vianet == "n" && connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
