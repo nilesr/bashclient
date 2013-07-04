@@ -45,7 +45,9 @@ function connectionloop {
 		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
 		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4`" # Display a message when connected
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
-		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section available
+		test ${line[1]} == "461" && echo "SERVER: `echo $rawline | substring-4`" # Not enough parameters
+		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section unavailable
+
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
@@ -337,26 +339,26 @@ while true; do
 		eval-global)
 			eval `echo "$rawcommand" | substring-2`
 			;;
-		connect) &;
+		connect) ;&
 		server)
 			connect ${command[1]} ${command[2]}
 			;;
-		close) &;
+		close) ;&
 		exit)
 			closeprogram &>/dev/null
 			;;
 		nick)
 			nick ${command[1]}
 			;;
-		networks) &;
+		networks) ;&
 		servers)
 			networks
 			;;
-		quote) &;
+		quote) ;&
 		ircquote)
 			echo `echo $rawcommand | substring-2` >&3
 			;;
-		help) &;
+		help) ;&
 		h)
 			help ${command[1]}
 			;;
