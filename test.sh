@@ -1,3 +1,4 @@
+# Requires bash 4.0 or later due to switch fallthroughs
 function quit {
 	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
 	echo "QUIT :`echo $rawcommand | substring-2`" >&3
@@ -83,10 +84,10 @@ function query {
 }
 
 function connect {
+	test -n $1 || ( echo "Please specify a server address or name"; continue )
 	socketaddr=$1
-	test -n $socketaddr || ( echo "Please specify a server"; continue )
 	test -n $2 && socketport=$2 || socketport=6667
-	test -d $CONFDIR/networks/$1 && ( socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`; socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1` )
+	test -d $CONFDIR/networks/$1 && ( export socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`; export socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1` )
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
 	socketport=
@@ -192,26 +193,32 @@ function help {
 	topic=`echo $1 | awk '{print tolower($1)}'`
 	case $topic in
 		quit)
+		;&
 		q)
+		;&
 		disconnect)
 			echo "USAGE: 		/quit"
 			echo "DESCRIPTION: 	Disconnects you from your active IRC connection, but keeps the application open"
 			echo "ALIASES: 		/q, /disconnect"
 		;;
 		msg)
+		;&
 		privmsg)
+		;&
 		tell)
 			echo "USAGE: 		/msg <nick> <text>"
 			echo "DESCRIPTION: 	Sends a private message to <nick> containing <text>"
 			echo "ALIASES: 		/privmsg, /tell"
 		;;
 		join)
+		;&
 		j)
 			echo "USAGE: 		/join <channel> [key]"
 			echo "DESCRIPTION: 	Joins a specific <channel>, with a [key] word if requierd"
 			echo "ALIASES: 		/j"
 		;;
 		part)
+		;&
 		p)
 			echo "USAGE: 		/part <channel>"
 			echo "DESCRIPTION: 	Leaves a specific channel"
@@ -232,12 +239,14 @@ function help {
 			echo "SEE ALSO: 	/eval"
 		;;
 		connect)
+		;&
 		server)
 			echo "USAGE: 		/connect <addr | addr port | networkname>"
 			echo "DESCRIPTION: 	Connects you to a new active IRC connection, either by address, address and port or network name"
 			echo "ALIASES: 		/server"
 		;;
 		close)
+		;&
 		exit)
 			echo "USAGE: 		/close"
 			echo "DESCRIPTION: 	Closes the application and all running IRC network sessions"
@@ -248,18 +257,21 @@ function help {
 			echo "DESCRIPTION: 	Changes your nickname on the server"
 		;;
 		networks)
+		;&
 		servers)
 			echo "USAGE: 		/networks [command] [options]"
 			echo "DESCRIPTION: 	Manages networks"
 			echo "DESCRIPTION: 	For more information, run /networks or /networks help"
 		;;
 		quote)
+		;&
 		ircquote)
 			echo "USAGE: 		/quote <direct string>"
 			echo "DESCRIPTION: 	Sends a <direct string> to the server"
 			echo "ALIASES:	 	/ircquote"
 		;;
 		help)
+		;&
 		h)
 			echo "USAGE: 		/help [topic]"
 			echo "DESCRIPTION: 	Checks to see if [topic] has any help available, and if it does, give it to the user"
