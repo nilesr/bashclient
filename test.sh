@@ -22,13 +22,13 @@ function prompt-for {
 	echo $toreturn
 }
 function substring-1 {
-	read | awk '{print substr($0, index($0,$1))}'
+	read toparse; echo $toparse | awk '{print substr($0, index($0,$1))}'; toparse=
 }
 function substring-2 {
-	read | awk '{print substr($0, index($0,$2))}'
+	read toparse; echo $toparse | awk '{print substr($0, index($0,$2))}'; toparse=
 }
 function substring-3 {
-	read | awk '{print substr($0, index($0,$3))}'
+	read toparse; echo $toparse | awk '{print substr($0, index($0,$3))}'; toparse=
 }
 function connectionloop {
 	sleep 1
@@ -89,10 +89,14 @@ function query {
 function connect {
 	test -n $1 || ( echo "Please specify a server address or name"; continue )
 	socketaddr=$1
-	test -n $2 && socketport=$2 || socketport=6667
-	test -d $CONFDIR/networks/$1 && ( export socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`; export socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1` )
+#	test -d $CONFDIR/networks/$1 && ( export socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`; export socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1` )
+	test -d $CONFDIR/networks/$1 && vianet="y" || vianet="n"
+	test $vianet == "y" && socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`
+	test $vianet == "y" && socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1`
+	test -n $socketport || socketport="6667"
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
+	vianetwork=
 	socketport=
 	socketaddr=
 	connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
@@ -310,7 +314,7 @@ while true; do
 	test $basecommand == "quit" || test $basecommand == "q" || test $basecommand == "disconnect" && quit
 	test $basecommand == "msg" || test $basecommand == "privmsg" || test $basecommand == "tell" && privmsg
 	test $basecommand == "join" || test $basecommand == "j" && joinchannel
-	test $basecommand == "part" || $basecommand == "p" && partchannel
+#	test $basecommand == "part" || $basecommand == "p" && partchannel
 	test $basecommand == "query" && query
 	test $basecommand == "eval" && ( eval `echo "$rawcommand" | substring-1` )
 	test $basecommand == "eval-global" && eval `echo "$rawcommand" | substring-1`
@@ -318,8 +322,8 @@ while true; do
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
 	test $basecommand == "networks" || test $basecommand == "servers" && networks
-	test $basecommand == "quote" || $basecommand == "ircquote" && echo `echo $rawcommand substring-3` >&3
-	test $basecommand == "help" || $basecommand == "h" && help ${command[1]}
+#	test $basecommand == "quote" || $basecommand == "ircquote" && echo `echo $rawcommand | substring-3` >&3
+#	test $basecommand == "help" || $basecommand == "h" && help ${command[1]}
 	test $basecommand == "helpop" && echo "HELP :`echo $rawcommand | substring-2`" >&3
 	rawcommand=
 	command=
