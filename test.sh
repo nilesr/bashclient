@@ -1,6 +1,6 @@
 function quit {
 	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
-	echo "QUIT :`substring-2 $rawcommand`" >&3
+	echo "QUIT :`echo $rawcommand | substring-2`" >&3
 	echo Link broken, connection closed.
 }
 function closeprogram {
@@ -21,10 +21,10 @@ function prompt-for {
 	echo $toreturn
 }
 function substring-2 {
-	echo "$@"|awk '{print substr($0, index($0,$2))}'
+	read | awk '{print substr($0, index($0,$2))}'
 }
 function substring-3 {
-	echo "$@"|awk '{print substr($0, index($0,$3))}'
+	read | awk '{print substr($0, index($0,$3))}'
 }
 function connectionloop {
 	sleep 1
@@ -39,12 +39,11 @@ function connectionloop {
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
 		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "Connected: `substring-3 $rawline`"
+		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-3`"
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
-		privmsgtolog=`echo $rawline | sed -e 's/.*:/:/g'`
-		privmsgtolog=`substring-2 "$privmsgtolog"`
+		privmsgtolog=`echo $rawline | sed -e 's/.*:/:/g' | substring-2`
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined ${line[2]}"
 		test ${line[1]} == "PART" && echo "$nicktodisplay has left ${line[2]}"
@@ -91,6 +90,7 @@ function connect {
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
 	socketport=
+	socketaddr=
 	connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
 }
 function nick {
@@ -102,33 +102,33 @@ function networks {
 	argument=`echo ${command[1]} | awk '{print tolower($0)}'`
 	case $argument in
 		reconfigure)
-		networks-reconfigure ${command[2]}
+			networks-reconfigure ${command[2]}
 		;;
 		create)
-		newnetwork
+			newnetwork
 		;;
 		list)
-		ls -1 $CONFDIR/networks
+			ls -1 $CONFDIR/networks
 		;;
 		list-auto)
-		cat $CONFDIR/autoconnect
+			cat $CONFDIR/autoconnect
 		;;
 		change-defaults)
-		change-defaults
+			change-defaults
 		;;
 		get-defaults)
-		get-defaults
+			get-defaults
 		;;
 		*)
-		echo "USAGE: /networks <option>"
-		echo "Possible options"
-		echo "----------------"
-		echo "reconfigure: 		Change settings on a network"
-		echo "create: 		Create a new network"
-		echo "list: 			List all networks available"
-		echo "list-auto: 		List all networks automatically connected"
-		echo "change-defaults:	Change default settings"
-		echo "get-defaults:		Get default settings"
+			echo "USAGE: /networks <option>"
+			echo "Possible options"
+			echo "----------------"
+			echo "reconfigure: 		Change settings on a network"
+			echo "create: 		Create a new network"
+			echo "list: 			List all networks available"
+			echo "list-auto: 		List all networks automatically connected"
+			echo "change-defaults:	Change default settings"
+			echo "get-defaults:		Get default settings"
 		;;
 	esac
 	argument=
@@ -188,6 +188,91 @@ function get-defaults {
 }
 
 
+function help {
+	topic=`echo $1 | awk '{print tolower($1)}'`
+	case $topic in
+		quit)
+		q)
+		disconnect)
+			echo "USAGE: 		/quit"
+			echo "DESCRIPTION: 	Disconnects you from your active IRC connection, but keeps the application open"
+			echo "ALIASES: 		/q, /disconnect"
+		;;
+		msg)
+		privmsg)
+		tell)
+			echo "USAGE: 		/msg <nick> <text>"
+			echo "DESCRIPTION: 	Sends a private message to <nick> containing <text>"
+			echo "ALIASES: 		/privmsg, /tell"
+		;;
+		join)
+		j)
+			echo "USAGE: 		/join <channel> [key]"
+			echo "DESCRIPTION: 	Joins a specific <channel>, with a [key] word if requierd"
+			echo "ALIASES: 		/j"
+		;;
+		part)
+		p)
+			echo "USAGE: 		/part <channel>"
+			echo "DESCRIPTION: 	Leaves a specific channel"
+			echo "ALIASES: 		/p"
+		;;
+		query)
+			echo "USAGE: 		/query <nick>"
+			echo "DESCRIPTION: 	Switches the active chatting pane to a private message with that unique <nick>"
+		;;
+		eval)
+			echo "USAGE: 		/eval <shell code>"
+			echo "DESCRIPTION: 	Evaluates the <shell code> in a subshell"
+			echo "SEE ALSO: 	/eval-global"
+		;;
+		eval-global)
+			echo "USAGE: 		/eval-global <shell code>"
+			echo "DESCRIPTION: 	Evaluates the <shell code>"
+			echo "SEE ALSO: 	/eval"
+		;;
+		connect)
+		server)
+			echo "USAGE: 		/connect <addr | addr port | networkname>"
+			echo "DESCRIPTION: 	Connects you to a new active IRC connection, either by address, address and port or network name"
+			echo "ALIASES: 		/server"
+		;;
+		close)
+		exit)
+			echo "USAGE: 		/close"
+			echo "DESCRIPTION: 	Closes the application and all running IRC network sessions"
+			echo "ALIASES: 		/exit"
+		;;
+		nick)
+			echo "USAGE: 		/nick <new-nickname>"
+			echo "DESCRIPTION: 	Changes your nickname on the server"
+		;;
+		networks)
+		servers)
+			echo "USAGE: 		/networks [command] [options]"
+			echo "DESCRIPTION: 	Manages networks"
+			echo "DESCRIPTION: 	For more information, run /networks or /networks help"
+		;;
+		quote)
+		ircquote)
+			echo "USAGE: 		/quote <direct string>"
+			echo "DESCRIPTION: 	Sends a <direct string> to the server"
+			echo "ALIASES:	 	/ircquote"
+		;;
+		help)
+		h)
+			echo "USAGE: 		/help [topic]"
+			echo "DESCRIPTION: 	Checks to see if [topic] has any help available, and if it does, give it to the user"
+			echo "ALIASES:	 	/h"
+		;;
+		*)
+			echo "USAGE: 		${command[0]} [topic]"
+			echo "COMMANDS:		quit, q, disconnect, msg, privmsg, tell, join, j, part, p, query, eval, eval-global, connect, server, close, exit, nick, networks, servers, quote, ircquote, help, h, helpop"
+		;;
+	esac
+}
+
+
 # Configuration check
 CONFDIR=~/.bashclient
 mkdir -p $CONFDIR/networks &>/dev/null
@@ -208,14 +293,17 @@ while true; do
 	test $basecommand == "quit" || test $basecommand == "q" || test $basecommand == "disconnect" && quit
 	test $basecommand == "msg" || test $basecommand == "privmsg" || test $basecommand == "tell" && privmsg
 	test $basecommand == "join" || test $basecommand == "j" && joinchannel
-	test $basecommand == "part" && partchannel
+	test $basecommand == "part" || $basecommand == "p" && partchannel
 	test $basecommand == "query" && query
-	test $basecommand == "eval" && `$basecommand`
+	test $basecommand == "eval" && ( eval $basecommand )
+	test $basecommand == "eval-global" && eval $basecommand
 	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
 	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
 	test $basecommand == "nick" && nick
 	test $basecommand == "networks" || test $basecommand == "servers" && networks
-	test $basecommand == "quote" && echo `substring-2 "$rawcommand" "3"` >&3
+	test $basecommand == "quote" || $basecommand == "ircquote" && echo `echo $rawcommand substring-3` >&3
+	test $basecommand == "help" || $basecommand == "h" && help ${command[1]}
+	test $basecommand == "helpop" && echo "HELP :`echo $rawcommand | substring-2`" >&3
 	rawcommand=
 	command=
 	basecommand=
