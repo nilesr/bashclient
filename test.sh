@@ -71,14 +71,14 @@ function privmsg {
 	echo ""
 }
 function joinchannel {
-	test -n ${command[2]} || chanpass=${command[2]}
-	test -n $chanpass && echo "JOIN `echo ${command[1]}`" >&3 || echo "JOIN `echo ${command[1]}` `echo $chanpass`" >&3
+	test -n $2 || chanpass=$2
+	test -n $chanpass && echo "JOIN `echo $1`" >&3 || echo "JOIN `echo $1` `echo $chanpass`" >&3
 	chanpass=
-	activewindow=${command[1]}
+	activewindow=$1
 }
 function partchannel {
 	topart=
-	test -n ${command[1]} && topart=$activewindow || topart=${command[1]}
+	test -n $1 && topart=$activewindow || topart=$1
 	test $topart == $activewindow && activewindow=
 	test ${topart:0:1} != "#" && ( echo "USAGE: /part <channel>. You seem to be having problems with the <channel> bit."; return )
 	echo "PART `echo $topart` :`echo $rawcommand | substring-3`" >&3
@@ -87,7 +87,7 @@ function partchannel {
 }
 
 function query {
-	test -n ${command[1]} || echo "USAGE: /query <nickname>" && activewindow=${command[1]}
+	test -n $1 || echo "USAGE: /query <nickname>" && activewindow=$1
 }
 
 function connect {
@@ -109,9 +109,9 @@ function connect {
 	socketaddr=
 }
 function nick {
-	test -n ${command[1]} || ( echo $nickname; return )
-	echo "NICK :"${command[1]} >&3
-	nickname=${command[1]}
+	test -n $1 || ( echo $nickname; return )
+	echo "NICK :"$1 >&3
+	nickname=$1
 }
 function networks {
 	argument=`echo ${command[1]} | awk '{print tolower($0)}'`
@@ -311,7 +311,7 @@ while true; do
 	command=( $rawcommand )
 	basecommand=`echo ${command[0]} | awk '{print tolower(substr($1,2)); }'`
 	test -n "$basecommand" || continue # If the message was just "/", ignore it
-	case $basecommand in # To be changed, joinchannel, partchannel, query, nick
+	case $basecommand in
 		quit) ;&
 		q) ;&
 		disconnect)
