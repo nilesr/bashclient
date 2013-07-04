@@ -116,22 +116,22 @@ function networks {
 	case $argument in
 		reconfigure)
 			networks-reconfigure ${command[2]}
-		;;
+			;;
 		create)
 			newnetwork
-		;;
+			;;
 		list)
 			ls -1 $CONFDIR/networks
-		;;
+			;;
 		list-auto)
 			cat $CONFDIR/autoconnect
-		;;
+			;;
 		change-defaults)
 			change-defaults
-		;;
+			;;
 		get-defaults)
 			get-defaults
-		;;
+			;;
 		*)
 			echo "USAGE: /networks <option>"
 			echo "Possible options"
@@ -142,7 +142,7 @@ function networks {
 			echo "list-auto: 		List all networks automatically connected"
 			echo "change-defaults:	Change default settings"
 			echo "get-defaults:		Get default settings"
-		;;
+			;;
 	esac
 	argument=
 }
@@ -204,99 +204,88 @@ function get-defaults {
 function help {
 	topic=`echo $1 | awk '{print tolower($1)}'`
 	case $topic in
-		quit)
-		;&
-		q)
-		;&
+		quit) ;&
+		q) ;&
 		disconnect)
 			echo "USAGE: 		/quit"
 			echo "DESCRIPTION: 	Disconnects you from your active IRC connection, but keeps the application open"
 			echo "ALIASES: 	/q, /disconnect"
-		;;
-		msg)
-		;&
-		privmsg)
-		;&
+			;;
+		msg) ;&
+		privmsg) ;&
 		tell)
 			echo "USAGE: 		/msg <nick> <text>"
 			echo "DESCRIPTION: 	Sends a private message to <nick> containing <text>"
 			echo "ALIASES: 	/privmsg, /tell"
-		;;
-		join)
-		;&
+			;;
+		join) ;&
 		j)
 			echo "USAGE: 		/join <channel> [key]"
 			echo "DESCRIPTION: 	Joins a specific <channel>, with a [key] word if requierd"
 			echo "ALIASES: 	/j"
-		;;
-		part)
-		;&
+			;;
+		part) ;&
 		p)
 			echo "USAGE: 		/part <channel>"
 			echo "DESCRIPTION: 	Leaves a specific channel"
 			echo "ALIASES: 	/p"
-		;;
+			;;
 		query)
 			echo "USAGE: 		/query <nick>"
 			echo "DESCRIPTION: 	Switches the active chatting pane to a private message with that unique <nick>"
-		;;
+			;;
 		eval)
 			echo "USAGE: 		/eval <shell code>"
 			echo "DESCRIPTION: 	Evaluates the <shell code> in a subshell"
 			echo "SEE ALSO: 	/eval-global"
-		;;
+			;;
 		eval-global)
 			echo "USAGE: 		/eval-global <shell code>"
 			echo "DESCRIPTION: 	Evaluates the <shell code>"
 			echo "SEE ALSO: 	/eval"
-		;;
-		connect)
-		;&
+			;;
+		connect) ;&
 		server)
 			echo "USAGE: 		/connect <addr | addr port | networkname>"
 			echo "DESCRIPTION: 	Connects you to a new active IRC connection, either by address, address and port or network name"
 			echo "ALIASES: 	/server"
-		;;
-		close)
-		;&
+			;;
+		close) ;&
 		exit)
 			echo "USAGE: 		/close"
 			echo "DESCRIPTION: 	Closes the application and all running IRC network sessions"
 			echo "ALIASES: 	/exit"
-		;;
+			;;
 		nick)
 			echo "USAGE: 		/nick <new-nickname>"
 			echo "DESCRIPTION: 	Changes your nickname on the server"
-		;;
-		networks)
-		;&
+			;;
+		networks) ;&
 		servers)
 			echo "USAGE: 		/networks [command] [options]"
 			echo "DESCRIPTION: 	Manages networks"
 			echo "DESCRIPTION: 	For more information, run /networks or /networks help"
-		;;
-		quote)
-		;&
+			;;
+		quote) ;&
 		ircquote)
 			echo "USAGE: 		/quote <direct string>"
 			echo "DESCRIPTION: 	Sends a <direct string> to the server"
 			echo "ALIASES:	/ircquote"
-		;;
-		help)
-		;&
+			;;
+		help) ;&
 		h)
 			echo "USAGE: 		/help [topic]"
 			echo "DESCRIPTION: 	Checks to see if [topic] has any help available, and if it does, give it to the user"
 			echo "ALIASES:	/h"
-		;;
+			;;
 		helop)
 			echo "USAGE:		/helpop [topic]"
 			echo "DESCRIPTION:	Queries your currently connected server for help on a specific topic"
-		;;
+			;;
 		*)
 			echo "USAGE: 		${command[0]} [topic]"
 			echo "COMMANDS:	quit, q, disconnect, msg, privmsg, tell, join, j, part, p, query, eval, eval-global, connect, server, close, exit, nick, networks, servers, quote, ircquote, help, h, helpop"
-		;;
+			;;
 	esac
 }
 
@@ -316,24 +305,71 @@ test "`ls -A $CONFDIR/networks`" || askfornewnetwork
 while true; do
 	read rawcommand
 	test -n "$rawcommand" || continue # If the message is blank, ignore it
-	test ${rawcommand:0:1} == "/" || sendmessage  # If the first character in the rawcommand is not a /, send it to the channel and skip the rest of the loop, otherwise continue with the loop
+	test ${rawcommand:0:1} == "/" || sendmessage  # If the first character in the rawcommand is not a /, send it to the channel, otherwise do nothing
 	command=( $rawcommand )
 	basecommand=`echo ${command[0]} | awk '{print tolower(substr($1,2)); }'`
 	test -n "$basecommand" || continue # If the message was just "/", ignore it
-	test $basecommand == "quit" || test $basecommand == "q" || test $basecommand == "disconnect" && quit
-	test $basecommand == "msg" || test $basecommand == "privmsg" || test $basecommand == "tell" && privmsg
-	test $basecommand == "join" || test $basecommand == "j" && joinchannel
-	test $basecommand == "part" || test $basecommand == "p" && partchannel
-	test $basecommand == "query" && query
-	test $basecommand == "eval" && ( eval `echo "$rawcommand" | substring-2` )
-	test $basecommand == "eval-global" && eval `echo "$rawcommand" | substring-2`
-	test $basecommand == "connect" || test $basecommand == "server" && connect ${command[1]} ${command[2]}
-	test $basecommand == "close" || test $basecommand == "exit" && closeprogram &>/dev/null
-	test $basecommand == "nick" && nick
-	test $basecommand == "networks" || test $basecommand == "servers" && networks
-	test $basecommand == "quote" || test $basecommand == "ircquote" && echo `echo $rawcommand | substring-2` >&3
-	test $basecommand == "help" || test $basecommand == "h" && help ${command[1]}
-	test $basecommand == "helpop" && echo "HELP :`echo $rawcommand | substring-2`" >&3
+	case $basecommand in # To be changed, joinchannel, partchannel, query, nick
+		quit) ;&
+		q) ;&
+		disconnect)
+			quit
+			;;
+		msg) ;&
+		privmsg) ;&
+		tell)
+			privmsg
+			;;
+		join) ;&
+		j)
+			joinchannel ${command[1]} ${command[2]}
+			;;
+		part) ;&
+		p)
+			partchannel ${command[1]}
+			;;
+		query)
+			query ${command[1]}
+			;;
+		eval)
+			( eval `echo "$rawcommand" | substring-2` )
+			;;
+		eval-global)
+			eval `echo "$rawcommand" | substring-2`
+			;;
+		connect) &;
+		server)
+			connect ${command[1]} ${command[2]}
+			;;
+		close) &;
+		exit)
+			closeprogram &>/dev/null
+			;;
+		nick)
+			nick ${command[1]}
+			;;
+		networks) &;
+		servers)
+			networks
+			;;
+		quote) &;
+		ircquote)
+			echo `echo $rawcommand | substring-2` >&3
+			;;
+		help) &;
+		h)
+			help ${command[1]}
+			;;
+		helpop)
+			echo "HELP :`echo $rawcommand | substring-2`" >&3
+			;;
+
+
+		*)
+			echo $rawcommand >&3 # Incorrect, needs to be changed to exclude the leading /
+			;;
+	
+	esac
 	rawcommand=
 	command=
 	basecommand=
