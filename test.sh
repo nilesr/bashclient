@@ -37,7 +37,7 @@ function ctcp {
 			echo "* $nicktodisplay $privmsgtolog"
 			;;
 		*)
-			echo "NOTICE `echo $nicktodisplay` :`echo -n $soh`CTCP `echo $ctcpcommand` is not supported on this client.`echo -n $soh`" >&3
+			echo "PRIVMSG `echo $nicktodisplay` :`echo -n $soh`CTCP `echo $ctcpcommand` is not supported on this client.`echo -n $soh`" >&3
 			echo "Recieved CTCP $ctcpcommand from $nicktodisplay"
 			;;
 	esac
@@ -85,10 +85,13 @@ function connectionloop {
 	echo $! | tee $CONFDIR/client.pid
 }
 function has-connected {
-	cat $CONFDIR/networks/$1/autorun >&3
+	#cat $CONFDIR/networks/$1/autorun >&3
+	while read runtoexec; do
+		test "${runtoexec:0:1}" == "#" || echo "$runtoexec" >&3	
+	done < $CONFDIR/networks/$1/autorun
 	test -n "`cat $CONFDIR/networks/$1/nickserv`" && echo "PRIVMSG NickServ :identify `cat $CONFDIR/networks/$1/nickserv`" >&3
 	for channeltojoin in `cat $CONFDIR/networks/$1/autojoin`; do
-		join $channeltojoin
+		joinchannel $channeltojoin
 		channeltojoin=
 	done
 }
@@ -149,6 +152,9 @@ function networks {
 		reconfigure)
 			networks-reconfigure ${command[2]}
 			;;
+		reconfigure-auto)
+			networks-reconfigure-auto ${command[2]}
+			;;
 		create)
 			newnetwork
 			;;
@@ -169,6 +175,7 @@ function networks {
 			echo "Possible options"
 			echo "----------------"
 			echo "reconfigure: 		Change settings on a network"
+			echo "reconfigure-auto:	Change settings about automatically run commands, automatically joined channels and nickserv password"
 			echo "create: 		Create a new network"
 			echo "list: 			List all networks available"
 			echo "list-auto: 		List all networks automatically connected"
@@ -178,7 +185,19 @@ function networks {
 	esac
 	argument=
 }
-
+function networks-reconfigure-auto {
+	test -n "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname; exit 1 ) && netname=$1
+	test -d "$CONFDIR/networks/$netname" || ( echo "That network doesn't exist"; exit 1 ) || return
+	usenickserv=`prompt-for "Authenticate with NickServ? [Y] "`
+	test $usenickserv == "y" && ( read -s -p "Password? " nickservpass; echo $nickservpass > $CONFDIR/networks/$netname/nickserv; nickservpass=; echo "")
+	usenickserv=
+	useautojoin=`prompt-for "Join any channels automatically? [Y] "`
+	test $useautojoin == "y" && nano $CONFDIR/networks/$netname/autojoin || ( echo "" | tee $CONFDIR/networks/$netname/autojoin ) &>/dev/null
+	useautojoin=
+	useautocommands=`prompt-for "Run any commands automatically? [Y] "`
+	test $useautocommands == "y" && nano $CONFDIR/networks/$netname/autorun || ( echo "" | tee $CONFDIR/networks/$netname/autorun ) &>/dev/null
+	useautocommands=
+}
 function networks-reconfigure {
 	test -n "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname; exit 1 ) && netname=$1
 	test -d "$CONFDIR/networks/$netname" || ( echo "That network doesn't exist"; exit 1 ) || return
@@ -342,9 +361,9 @@ mkdir -p $CONFDIR/networks &>/dev/null
 mkdir -p $CONFDIR/default &>/dev/null
 test -s $CONFDIR/default/username || ( echo $USER | tee $CONFDIR/default/username ) &>/dev/null
 test -s $CONFDIR/default/realname || ( echo $USER | tee $CONFDIR/default/realname ) &>/dev/null
-touch $CONFDIR/default/autojoin &>/dev/null
-touch $CONFDIR/default/nickserv &>/dev/null
-touch $CONFDIR/default/autorun &>/dev/null
+test -f $CONFDIR/default/autojoin || ( touch $CONFDIR/default/autojoin )
+test -f $CONFDIR/default/nickserv || ( touch $CONFDIR/default/nickserv )
+test -f $CONFDIR/default/autorun || ( touch $CONFDIR/default/autorun; echo "# Enter the commands that will be sent directly to the server." | tee -a $CONFDIR/default/autorun; echo "# " | tee -a $CONFDIR/default/autorun; echo "# Example: PRIVMSG MyCustomBot :LOGIN mypassword" | tee -a $CONFDIR/default/autorun ) &>/dev/null
 touch $CONFDIR/autoconnect &>/dev/null
 test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname= )
 
