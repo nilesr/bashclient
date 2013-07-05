@@ -4,16 +4,14 @@
 function quit {
 	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
 	echo "QUIT :`echo $rawcommand | substring-2`" >&3
-	echo Link broken, connection closed.
 }
 function closeprogram {
-	( quit
+	( quit &
 	sleep 2
 	test -s client.pid && kill `cat $CONFDIR/client.pid`
 	rm $CONFDIR/client.pid
 	cat $CONFDIR/autoconnect | sort | uniq | tee $CONFDIR/autoconnect.temp
 	mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect ) &>/dev/null &
-	exit
 }
 trap "closeprogram  &>/dev/null & exit" SIGINT SIGTERM
 function prompt-for {
@@ -33,13 +31,14 @@ function substring-4 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$4))}'; toparse=
 }
 function ctcp {
-	ctcpcommand=`echo $1 | awk '{print tolower($0)}'`
+	ctcpcommand=`echo $1 | sed 's/[^0-9a-zA-Z]//g' | awk '{print toupper($0)}'`
+	echo $ctcpcommand
 	case ctcpcommand in
-		action)
+		ACTION)
 			echo "* $nicktodisplay $privmsgtolog"
 			;;
 		*)
-			echo "NOTICE `echo $nicktodisplay` :`echo $soh`CTCP `echo $1` is not supported on this client.`echo $soh`" >&3
+			echo "NOTICE `echo $nicktodisplay` :`echo -n $soh`CTCP `echo $ctcpcommand` is not supported on this client.`echo -n $soh`" >&3
 			;;
 	esac
 	ctcpcommand=
@@ -55,7 +54,7 @@ function connectionloop {
 		line=( $rawline )
 		test -n "${line[0]}" || continue # If the server sends an empty line, ignore the line
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
-		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
+		test ${line[0]} == "ERROR" && ( quit &2>/dev/null; echo Server connection closed. ) # Die if the server disconnects us
 		test -n "${line[1]}" || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
 		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4 | cut -c 2-`" # Display a message when connected
 		test ${line[1]} == "307" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
