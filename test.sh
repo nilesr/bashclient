@@ -187,15 +187,24 @@ function newnetwork {
 	newnetname=
 }
 function change-defaults {
-	read -p "Current default nickname is `cat $CONFDIR/default/nickname`. [`cat $CONFDIR/default/nickname`] " newdefnick
-	test -n $newdefnick || newdefnick=`cat $CONFDIR/default/nickname`
-	echo $newdefnick > $CONFDIR/default/nickname
-	read -p "Current default username is `cat $CONFDIR/default/username`. [`cat $CONFDIR/default/username`] " newdefuser
-	test -n $newdefuser || newdefuser=`cat $CONFDIR/default/username`
-	echo $newdefuser > $CONFDIR/default/username
-	read -p "Current default realname is `cat $CONFDIR/default/realname`. [`cat $CONFDIR/default/realname`] " newdefreal
-	test -n $newdefreal || newdefreal=`cat $CONFDIR/default/realname`
-	echo $newdefreal > $CONFDIR/default/realname
+	currentdefnick=`cat $CONFDIR/default/nickname`
+	currentdefuser=`cat $CONFDIR/default/username`
+	currentdefreal=`cat $CONFDIR/default/realname`
+	read -p "Current default nickname is `echo $currentdefnick`. [`echo $currentdefnick`] " newdefnick
+	test -n "$newdefnick" || newdefnick=$currentdefnick
+	echo $newdefnick | tee $CONFDIR/default/nickname
+	read -p "Current default username is `echo $currentdefuser`. [`echo $currentdefuser`] " newdefuser
+	test -n "$newdefuser" || newdefuser=$currentdefuser
+	echo $newdefuser | tee $CONFDIR/default/username
+	read -p "Current default realname is `echo $currentdefreal`. [`echo $currentdefreal`] " newdefreal
+	test -n "$newdefreal" || newdefreal=$currentdefreal
+	echo $newdefreal | tee $CONFDIR/default/realname
+	newdefnick=
+	newdefuser=
+	newdefreal=
+	currentdefnick=
+	currentdefuser=
+	currentdefreal=
 }
 function get-defaults {
 	echo "Current default nickname is `cat $CONFDIR/default/nickname`."
