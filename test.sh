@@ -64,10 +64,13 @@ function connectionloop {
 		test ${line[1]} == "317" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "318" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "338" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unable to send to channel
 
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
 		test ${line[1]} == "461" && echo "SERVER: `echo $rawline | substring-4`" # Not enough parameters
 		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section unavailable
+		test ${line[1]} == "713" && echo "SERVER: `echo $rawline | substring-4`" # Cannot knock, channel is open
+
 
 		test -n "${line[2]}" || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n "${line[3]}" || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
@@ -78,7 +81,7 @@ function connectionloop {
 		test ${line[1]} == "NOTICE" && echo ${line[2]}" <notice/$nicktodisplay> $privmsgtolog" # Displays a notice
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined `echo ${line[2]} | cut -c 2-`"
 		test ${line[1]} == "PART" && echo "$nicktodisplay has left `echo ${line[2]} | cut -c 2-`"
-		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: `echo $rawline | substring-2 | cut -c 2-`"
+		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: `echo $rawline | substring-3 | cut -c 2-`"
 		test ${line[1]} == "NICK" && echo "$nicktodisplay is now known as: `echo ${line[2]} | cut -c 2-`"
 
 	done <&3 &
