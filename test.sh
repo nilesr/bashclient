@@ -39,66 +39,66 @@ function connectionloop {
 		line=
 		echo "$rawline" | tee -a $CONFDIR/client.log &> /dev/null
 		line=( $rawline )
-		test -n ${line[0]} || continue # If the server sends an empty line, ignore the line
+		test -n "${line[0]}" || continue # If the server sends an empty line, ignore the line
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
-		test -n ${line[1]} || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4`" # Display a message when connected
+		test -n "${line[1]}" || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
+		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4 | cut -c 2-`" # Display a message when connected
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
 		test ${line[1]} == "461" && echo "SERVER: `echo $rawline | substring-4`" # Not enough parameters
 		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section unavailable
 
-		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
-		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
-		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' ` # Change this to include cutting off the first character
-		privmsgtolog=`echo $rawline | substring-2 ` # Change this to include cutting off the first character
+		test -n "${line[2]}" || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
+		test -n "${line[3]}" || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
+		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' | cut -c 2-`
+		privmsgtolog=`echo $rawline | substring-4 | cut -c 2-`
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
 		test ${line[1]} == "NOTICE" && echo ${line[2]}" <notice/$nicktodisplay> $privmsgtolog" # Displays a notice
-		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined ${line[2]}"
-		test ${line[1]} == "PART" && echo "$nicktodisplay has left ${line[2]}"
-		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: $privmsgtolog"
-		test ${line[1]} == "NICK" && echo "$nicktodisplay is now known as: $privmsgtolog"
+		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined `echo ${line[2]} | cut -c 2-`"
+		test ${line[1]} == "PART" && echo "$nicktodisplay has left `echo ${line[2]} | cut -c 2-`"
+		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: `echo $rawline | substring-2 | cut -c 2-"
+		test ${line[1]} == "NICK" && echo "$nicktodisplay is now known as: `echo ${line[2]} | cut -c 2-`"
 
 	done <&3 &
 	echo $! | tee $CONFDIR/client.pid
 }
 
 function sendmessage {
-	test -n $activewindow || echo "No channel joined" && echo "PRIVMSG $activewindow :$rawcommand" >&3
+	test -n "$activewindow" || echo "No channel joined" && echo "PRIVMSG $activewindow :$rawcommand" >&3
 }
 function privmsg {
-	test -n ${command[1]} || echo -n "USAGE: /msg <nickname>. "
-	test -n ${command[2]} || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | substring-3`" >&3
+	test -n "${command[1]}" || echo -n "USAGE: /msg <nickname>. "
+	test -n "${command[2]}" || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | substring-3`" >&3
 	echo ""
 }
 function joinchannel {
-	test -n $2 || chanpass=$2
-	test -n $chanpass && echo "JOIN `echo $1`" >&3 || echo "JOIN `echo $1` `echo $chanpass`" >&3
+	test -n "$2" || chanpass=$2
+	test -n "$chanpass" && echo "JOIN `echo $1`" >&3 || echo "JOIN `echo $1` `echo $chanpass`" >&3
 	chanpass=
 	activewindow=$1
 }
 function partchannel {
 	topart=
-	test -n $1 && topart=$activewindow || topart=$1
+	test -n "$1" && topart=$activewindow || topart=$1
 	test $topart == $activewindow && activewindow=
-	test ${topart:0:1} != "#" && ( echo "USAGE: /part <channel>. You seem to be having problems with the <channel> bit."; return )
+	test ${topart:0:1} != "#" && ( echo "USAGE: /part <channel>. You seem to be having problems with the <channel> bit."; exit 0 ) && continue
 	echo "PART `echo $topart` :`echo $rawcommand | substring-3`" >&3
 	echo Left channel "$topart".
 	topart=
 }
 
 function query {
-	test -n $1 || echo "USAGE: /query <nickname>" && activewindow=$1
+	test -n "$1" || echo "USAGE: /query <nickname>" && activewindow=$1
 }
 
 function connect {
-	test -n $1 || ( echo "Please specify a server address or name"; continue )
+	test -n "$1" || ( echo "Please specify a server address or name"; exit 1 ) || return # If the first argument is null exit
 	socketaddr=$1
 #	test -d $CONFDIR/networks/$1 && ( export socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`; export socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1` )
 	test -d $CONFDIR/networks/$1 && vianet="y" || vianet="n"
 	test $vianet == "y" && socketaddr=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $1}' | head -n 1`
 	test $vianet == "y" && socketport=`cat "$CONFDIR/networks/$1/addresses" | awk '{print $2}' | head -n 1`
-	test $vianet == "n" && test -n $2 && socketport=$2
+	test $vianet == "n" && test -n "$2" && socketport=$2
 	test -n "$socketport" || socketport="6667"
 	echo $socketport
 	
@@ -110,7 +110,7 @@ function connect {
 	socketaddr=
 }
 function nick {
-	test -n $1 || ( echo $nickname; return )
+	test -n "$1" || ( echo $nickname; return )
 	echo "NICK :"$1 >&3
 	nickname=$1
 }
@@ -156,7 +156,7 @@ function networks-reconfigure {
 	netaddr=
 	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
 	read netaddr
-	test -n `echo $netaddr | awk '{print $2}'` || ( echo $netaddr 6667 | tee -a $CONFDIR/networks/$netname/addresses ) && ( echo $netaddr | tee -a $CONFDIR/networks/$netname/addresses ) &>/dev/null
+	test -n "`echo $netaddr | awk '{print $2}'`" || ( echo $netaddr 6667 | tee -a $CONFDIR/networks/$netname/addresses ) && ( echo $netaddr | tee -a $CONFDIR/networks/$netname/addresses ) &>/dev/null
 	netaddr=
 	autoconnect=
 	autoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
@@ -317,7 +317,7 @@ test "`ls -A $CONFDIR/networks`" || askfornewnetwork
 while true; do
 	read rawcommand
 	test -n "$rawcommand" || continue # If the message is blank, ignore it
-	test ${rawcommand:0:1} == "/" || sendmessage  # If the first character in the rawcommand is not a /, send it to the channel, otherwise do nothing
+	test "${rawcommand:0:1}" == "/" || ( sendmessage; exit 1 ) || continue  # If the first character in the rawcommand is not a /, send it to the channel, otherwise do nothing
 	command=( $rawcommand )
 	basecommand=`echo ${command[0]} | awk '{print tolower(substr($1,2)); }'`
 	test -n "$basecommand" || continue # If the message was just "/", ignore it
