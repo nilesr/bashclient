@@ -32,13 +32,13 @@ function substring-4 {
 }
 function ctcp {
 	ctcpcommand=`echo $1 | sed 's/[^0-9a-zA-Z]//g' | awk '{print toupper($0)}'`
-	echo $ctcpcommand
 	case ctcpcommand in
 		ACTION)
 			echo "* $nicktodisplay $privmsgtolog"
 			;;
 		*)
 			echo "NOTICE `echo $nicktodisplay` :`echo -n $soh`CTCP `echo $ctcpcommand` is not supported on this client.`echo -n $soh`" >&3
+			echo "Recieved CTCP $ctcpcommand from $nicktodisplay"
 			;;
 	esac
 	ctcpcommand=
@@ -56,7 +56,7 @@ function connectionloop {
 		test ${line[0]} == "PING" && echo `echo $rawline | sed 's/PING/PONG/1'` >&3 # Ping/pong support
 		test ${line[0]} == "ERROR" && ( quit &2>/dev/null; echo Server connection closed. ) # Die if the server disconnects us
 		test -n "${line[1]}" || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
-		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4 | cut -c 2-`" # Display a message when connected
+		test ${line[1]} == "001" && ( echo "Connected: `echo $rawline | substring-4 | cut -c 2-`"; test -n "$4" && has-connected "$4" ) # Display a message when connected
 		test ${line[1]} == "307" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "310" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "311" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
@@ -84,6 +84,14 @@ function connectionloop {
 	done <&3 &
 	echo $! | tee $CONFDIR/client.pid
 }
+function has-connected {
+	cat $CONFDIR/networks/$1/autorun >&3
+	test -n "`cat $CONFDIR/networks/$1/nickserv`" && echo "PRIVMSG NickServ :identify `cat $CONFDIR/networks/$1/nickserv`" >&3
+	for channeltojoin in `cat $CONFDIR/networks/$1/autojoin`; do
+		join $channeltojoin
+		channeltojoin=
+	done
+}
 
 function sendmessage {
 	test -n "$activewindow" || echo "No channel joined" && echo "PRIVMSG $activewindow :$rawcommand" >&3
@@ -91,7 +99,6 @@ function sendmessage {
 function privmsg {
 	test -n "${command[1]}" || echo -n "USAGE: /msg <nickname>. "
 	test -n "${command[2]}" || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | substring-3`" >&3
-	echo ""
 }
 function joinchannel {
 	test -n "$2" || chanpass=$2
@@ -126,7 +133,7 @@ function connect {
 	
 	exec 3<>/dev/tcp/$socketaddr/$socketport
 	test $vianet == "n" && connectionloop `cat $CONFDIR/default/nickname` `cat $CONFDIR/default/username` `cat $CONFDIR/default/realname`
-	test $vianet == "y" && connectionloop `cat $CONFDIR/networks/$1/nickname` `cat $CONFDIR/networks/$1/username` `cat $CONFDIR/networks/$1/realname`
+	test $vianet == "y" && connectionloop `cat $CONFDIR/networks/$1/nickname` `cat $CONFDIR/networks/$1/username` `cat $CONFDIR/networks/$1/realname` "$1"
 	vianetwork=
 	socketport=
 	socketaddr=
@@ -173,8 +180,8 @@ function networks {
 }
 
 function networks-reconfigure {
-	test -n "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname )
-	test -d $CONFDIR/networks/$netname || ( echo "That network doesn't exist"; continue )
+	test -n "$1" || ( echo -n "Enter the network to modify: "; read netname; export netname; exit 1 ) && netname=$1
+	test -d "$CONFDIR/networks/$netname" || ( echo "That network doesn't exist"; exit 1 ) || return
 	netaddr=
 	echo -n "Either enter the address of the server or enter the address then the port, with a space between: "
 	read netaddr
@@ -185,6 +192,10 @@ function networks-reconfigure {
 	test $autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
 	usedefault=`prompt-for "Use default nickname, etc? [Y] "`
 	test $usedefault == "y" && cp $CONFDIR/default/* $CONFDIR/networks/$netname  || ( read -p "What nick do you want to use for this network? " customnick ; echo $customnick | tee $CONFDIR/networks/$netname/nickname &>/dev/null; read -p "What username do you want to use for this network? " customuser; echo $customuser | tee $CONFDIR/networks/$netname/username &>/dev/null; read -p "What realname do you want to use for this network? " customreal; echo $customreal | tee $CONFDIR/networks/$netname/realname &>/dev/null )
+	usedefault=
+	usenickserv=`prompt-for "Authenticate with NickServ? [Y] "`
+	test $usenickserv == "y" && ( read -s -p "Password? " nickservpass; echo $nickservpass > $CONFDIR/networks/$netname/nickserv; nickservpass=; echo "")
+	usenickserv=
 }
 function askfornewnetwork {
 	createnew=
@@ -331,10 +342,15 @@ mkdir -p $CONFDIR/networks &>/dev/null
 mkdir -p $CONFDIR/default &>/dev/null
 test -s $CONFDIR/default/username || ( echo $USER | tee $CONFDIR/default/username ) &>/dev/null
 test -s $CONFDIR/default/realname || ( echo $USER | tee $CONFDIR/default/realname ) &>/dev/null
+touch $CONFDIR/default/autojoin &>/dev/null
+touch $CONFDIR/default/nickserv &>/dev/null
+touch $CONFDIR/default/autorun &>/dev/null
 touch $CONFDIR/autoconnect &>/dev/null
 test -s $CONFDIR/default/nickname || ( echo -n "Please choose a nickname: " ; read newnickname; echo $newnickname | tee $CONFDIR/default/nickname &>/dev/null; newnickname= )
 
 test "`ls -A $CONFDIR/networks`" || askfornewnetwork
+
+test -n "`head -n 1 $CONFDIR/autoconnect`" && connect "`head -n 1 $CONFDIR/autoconnect`"
 
 # User input loop
 while true; do
