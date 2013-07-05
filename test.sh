@@ -50,9 +50,10 @@ function connectionloop {
 
 		test -n ${line[2]} || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n ${line[3]} || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
-		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' `
-		privmsgtolog=`echo $rawline | sed -e 's/.*:/:/g' | substring-2`
+		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' ` # Change this to include cutting off the first character
+		privmsgtolog=`echo $rawline | substring-2 ` # Change this to include cutting off the first character
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
+		test ${line[1]} == "NOTICE" && echo ${line[2]}" <notice/$nicktodisplay> $privmsgtolog" # Displays a notice
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined ${line[2]}"
 		test ${line[1]} == "PART" && echo "$nicktodisplay has left ${line[2]}"
 		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: $privmsgtolog"
@@ -159,9 +160,9 @@ function networks-reconfigure {
 	netaddr=
 	autoconnect=
 	autoconnect=`prompt-for "Auto-connect to this network on startup? [Y] "`
-	test autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
+	test $autoconnect == "y" && ( echo $netname | tee -a $CONFDIR/autoconnect ) || ( sed -i 's/$netname//1' <$CONFDIR/autoconnect >$CONFDIR/autoconnect.temp; mv $CONFDIR/autoconnect.temp $CONFDIR/autoconnect )  &>/dev/null
 	usedefault=`prompt-for "Use default nickname, etc? [Y] "`
-	test usedefault == "y" || ( read -p "What nick do you want to use for this network? " customnick ; echo $customnick | tee $CONFDIR/networks/$netname/nickname &>/dev/null; read -p "What username do you want to use for this network? " customuser; echo $customuser | tee $CONFDIR/networks/$netname/username &>/dev/null; read -p "What realname do you want to use for this network? " customreal; echo $customreal | tee $CONFDIR/networks/$netname/realname &>/dev/null ) && cp $CONFDIR/default/* $CONFDIR/networks/$netname 
+	test $usedefault == "y" && cp $CONFDIR/default/* $CONFDIR/networks/$netname  || ( read -p "What nick do you want to use for this network? " customnick ; echo $customnick | tee $CONFDIR/networks/$netname/nickname &>/dev/null; read -p "What username do you want to use for this network? " customuser; echo $customuser | tee $CONFDIR/networks/$netname/username &>/dev/null; read -p "What realname do you want to use for this network? " customreal; echo $customreal | tee $CONFDIR/networks/$netname/realname &>/dev/null )
 }
 function askfornewnetwork {
 	createnew=
