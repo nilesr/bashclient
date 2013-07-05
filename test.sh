@@ -1,3 +1,5 @@
+# Niles Rogoff <nilesrogoff@gmail.com>
+#
 # Requires bash 4.0 or later due to switch fallthroughs
 function quit {
 	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
@@ -30,6 +32,18 @@ function substring-3 {
 function substring-4 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$4))}'; toparse=
 }
+function ctcp {
+	ctcpcommand=`echo $1 | awk '{print tolower($0)}'`
+	case ctcpcommand in
+		action)
+			echo "* $nicktodisplay $privmsgtolog"
+			;;
+		*)
+			echo "NOTICE `echo $nicktodisplay` :`echo $soh`CTCP `echo $1` is not supported on this client.`echo $soh`" >&3
+			;;
+	esac
+	ctcpcommand=
+}
 function connectionloop {
 	sleep 1
 	echo "NICK $1" >&3
@@ -44,6 +58,14 @@ function connectionloop {
 		test ${line[0]} == "ERROR" && quit &2>/dev/null # Die if the server disconnects us
 		test -n "${line[1]}" || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
 		test ${line[1]} == "001" && echo "Connected: `echo $rawline | substring-4 | cut -c 2-`" # Display a message when connected
+		test ${line[1]} == "307" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "310" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "311" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "312" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "317" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "318" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "338" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
 		test ${line[1]} == "461" && echo "SERVER: `echo $rawline | substring-4`" # Not enough parameters
 		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section unavailable
@@ -52,11 +74,12 @@ function connectionloop {
 		test -n "${line[3]}" || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' | cut -c 2-`
 		privmsgtolog=`echo $rawline | substring-4 | cut -c 2-`
+		echo "${line[3]}" | grep -F $'\001' && ( ctcp ${line[3]} ${line[4]}; exit 0 ) && continue
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
 		test ${line[1]} == "NOTICE" && echo ${line[2]}" <notice/$nicktodisplay> $privmsgtolog" # Displays a notice
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined `echo ${line[2]} | cut -c 2-`"
 		test ${line[1]} == "PART" && echo "$nicktodisplay has left `echo ${line[2]} | cut -c 2-`"
-		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: `echo $rawline | substring-2 | cut -c 2-"
+		test ${line[1]} == "QUIT" && echo "$nicktodisplay has quit: `echo $rawline | substring-2 | cut -c 2-`"
 		test ${line[1]} == "NICK" && echo "$nicktodisplay is now known as: `echo ${line[2]} | cut -c 2-`"
 
 	done <&3 &
@@ -304,6 +327,7 @@ function help {
 
 # Configuration check
 CONFDIR=~/.bashclient
+soh=`echo $'\001'`
 mkdir -p $CONFDIR/networks &>/dev/null
 mkdir -p $CONFDIR/default &>/dev/null
 test -s $CONFDIR/default/username || ( echo $USER | tee $CONFDIR/default/username ) &>/dev/null
@@ -378,7 +402,7 @@ while true; do
 
 
 		*)
-			echo $rawcommand >&3 # Incorrect, needs to be changed to exclude the leading /
+			echo $rawcommand | cut -c 2- >&3
 			;;
 	
 	esac
