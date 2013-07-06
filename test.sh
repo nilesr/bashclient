@@ -30,18 +30,24 @@ function substring-3 {
 function substring-4 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$4))}'; toparse=
 }
+function substring-4 {
+	read toparse; echo $toparse | awk '{print substr($0, index($0,$5))}'; toparse=
+}
 function ctcp {
-	ctcpcommand=`echo $1 | sed 's/[^0-9a-zA-Z]//g' | awk '{print toupper($0)}'`
+	ctcpall=`echo $1 | sed 's/[^0-9a-zA-Z\ ]//g'`
+	ctcpcommand=`echo $ctcpall | awk '{print toupper($1)}'`
+	test "$ctcpcommand" == "ACTION" && ( echo "${line[2]} * $nicktodisplay `echo $rawline | substring-5`"; exit 0 ) && return
+	echo "Recieved CTCP $ctcpall from $nicktodisplay"
 	case ctcpcommand in
-		ACTION)
-			echo "* $nicktodisplay $privmsgtolog"
+		VERSION)
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`VERSION BashClient:Alpha:`uname -v``echo -n $soh`" >&3
 			;;
-		*)
-			echo "PRIVMSG `echo $nicktodisplay` :`echo -n $soh`CTCP `echo $ctcpcommand` is not supported on this client.`echo -n $soh`" >&3
-			echo "Recieved CTCP $ctcpcommand from $nicktodisplay"
-			;;
+		SOURCE)
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`SOURCE niles.mooo.com:/:test.sh`echo -n $soh`" >&3
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`SOURCE`echo -n $soh`" >&3
 	esac
 	ctcpcommand=
+	ctcpall=
 }
 function connectionloop {
 	sleep 1
@@ -128,7 +134,7 @@ function connectionloop {
 		test -n "${line[3]}" || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' | cut -c 2-`
 		privmsgtolog=`echo $rawline | substring-4 | cut -c 2-`
-		echo "${line[3]}" | grep -F $'\001' && ( ctcp ${line[3]} ${line[4]}; exit 0 ) && continue
+		echo "${line[3]}" | grep -F $'\001' && ( ctcp "`echo $rawline | substring-4`"; exit 0 ) && continue
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
 		test ${line[1]} == "NOTICE" && echo ${line[2]}" <notice/$nicktodisplay> $privmsgtolog" # Displays a notice
 		test ${line[1]} == "JOIN" && echo "$nicktodisplay has joined `echo ${line[2]} | cut -c 2-`"
@@ -401,9 +407,64 @@ function help {
 			echo "USAGE:		/helpop [topic]"
 			echo "DESCRIPTION:	Queries your currently connected server for help on a specific topic"
 			;;
+		ns) ;&
+		nickserv)
+			echo "USAGE: 		/ns <message>"
+			echo "DESCRIPTION:	Alias for /msg NickServ"
+			echo "ALIASES:		/nickserv"
+			;;
+		cs) ;&
+		chanserv)
+			echo "USAGE: 		/cs <message>"
+			echo "DESCRIPTION:	Alias for /msg ChanServ"
+			echo "ALIASES:		/chanserv"
+			;;
+		bs) ;&
+		botserv)
+			echo "USAGE: 		/bs <message>"
+			echo "DESCRIPTION:	Alias for /msg BotServ"
+			echo "ALIASES:		/botserv"
+			;;
+		hs) ;&
+		hostserv)
+			echo "USAGE: 		/hs <message>"
+			echo "DESCRIPTION:	Alias for /msg HostServ"
+			echo "ALIASES:		/hostserv"
+			;;
+		ms) ;&
+		memoserv)
+			echo "USAGE: 		/ms <message>"
+			echo "DESCRIPTION:	Alias for /msg MemoServ"
+			echo "ALIASES:		/memoserv"
+			;;
+		os) ;&
+		operserv)
+			echo "USAGE: 		/os <message>"
+			echo "DESCRIPTION:	Alias for /msg OperServ"
+			echo "ALIASES:		/operserv"
+			;;
+		hs) ;&
+		helpserv)
+			echo "USAGE: 		/hs <message>"
+			echo "DESCRIPTION:	Alias for /msg HelpServ"
+			echo "ALIASES:		/helpserv"
+			;;
+		me) ;&
+		do) ;&
+		action)
+			echo "USAGE: 		/me <message>"
+			echo "DESCRIPTION:	Sends an action"
+			echo "ALIASES:		/do, /action"
+			;;
+		ctcp) ;&
+		sendctcp)
+			echo "USAGE: 		/ctcp <nick> <message>"
+			echo "DESCRIPTION:	Sends an Client-to-Client-Protocol message"
+			echo "ALIASES:		/sendctcp"
+			;;
 		*)
 			echo "USAGE: 		${command[0]} [topic]"
-			echo "COMMANDS:	quit, q, disconnect, msg, privmsg, tell, join, j, part, p, query, eval, eval-global, connect, server, close, exit, nick, networks, servers, quote, ircquote, help, h, helpop"
+			echo "COMMANDS:	quit, q, disconnect, msg, privmsg, tell, join, j, part, p, query, eval, eval-global, connect, server, close, exit, nick, networks, servers, quote, ircquote, help, h, helpop, ns, nickserv, cs, chanserv, bs, botserv, hs, hostserv, ms, memoserv, os, operserv, hs, helpserv, me, action, do, sendctcp, ctcp"
 			;;
 	esac
 }
@@ -488,8 +549,42 @@ while true; do
 		helpop)
 			echo "HELP :`echo $rawcommand | substring-2`" >&3
 			;;
-
-
+		ns) ;&
+		nickserv)
+			echo "PRIVMSG NickServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		cs) ;&
+		chanserv)
+			echo "PRIVMSG ChanServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		bs) ;&
+		botserv)
+			echo "PRIVMSG BotServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		hs) ;&
+		hostserv)
+			echo "PRIVMSG HostServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		ms) ;&
+		memoserv)
+			echo "PRIVMSG MemoServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		os) ;&
+		operserv)
+			echo "PRIVMSG OperServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		hs) ;&
+		helpserv)
+			echo "PRIVMSG NickServ :`echo $rawcommand | substring-2`" >&3
+			;;
+		me) ;&
+		do) ;&
+		action)
+			echo "PRIVMSG $activewindow :`echo -n $soh`ACTION `echo $rawcommand | substring-2``echo -n $soh`" >&3
+			;;
+		ctcp) ;&
+		sendctcp)
+			echo "PRIVMSG ${command[1]} :`echo -n $soh``echo $rawcommand | substring-3``echo -n $soh`" >&3
 		*)
 			echo $rawcommand | cut -c 2- >&3
 			;;
