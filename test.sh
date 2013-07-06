@@ -57,13 +57,47 @@ function connectionloop {
 		test ${line[0]} == "ERROR" && ( quit &2>/dev/null; echo Server connection closed. ) # Die if the server disconnects us
 		test -n "${line[1]}" || continue # Returns false if there is no second argument. If it returns false, ignore the rest of the loop
 		test ${line[1]} == "001" && ( echo "Connected: `echo $rawline | substring-4 | cut -c 2-`"; test -n "$4" && has-connected "$4" ) # Display a message when connected
-		test ${line[1]} == "307" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
-		test ${line[1]} == "310" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
-		test ${line[1]} == "311" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
-		test ${line[1]} == "312" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
-		test ${line[1]} == "317" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
-		test ${line[1]} == "318" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
-		test ${line[1]} == "338" && echo "SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "005" && ( test ${line[2]} == ":Try" && ( quit; connect ${line[4]} ${line[6]} ) ) # RFC 2812 compliance. Server redirect (RPL_BOUNCE).
+		test ${line[1]} == "010" && ( quit; connect ${line[2]} ${line[3]} ) # Server redirect (Incidentally also RPL_BOUNCE. Also known as RPL_REDIR).
+		test ${line[1]} == "043" && echo "That nick is already in use. Your nickname has been changed. SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RPL_SAVENICK
+		test ${line[1]} == "200" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACELINK)
+		test ${line[1]} == "201" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACECONNECTING)
+		test ${line[1]} == "202" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEHANDSHAKE)
+		test ${line[1]} == "203" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEUNKNOWN)
+		test ${line[1]} == "204" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEOPERATOR)
+		test ${line[1]} == "205" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEUSER)
+		test ${line[1]} == "206" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACESERVER)
+		test ${line[1]} == "208" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACENEWTYPE)
+		test ${line[1]} == "209" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 2182 compliance. Trace info (RPL_TRACECLASS)
+		test ${line[1]} == "210" && ( echo "TRACE/SERVER: `echo $rawline | substring-2`"; echo "WARNING: This may be incorrect. Servers running aircd use RPL_STATS instead of RPL_TRACERECONNECT, against RFC 2182." ) # RFC 2182 compliance. Trace info (RPL_TRACERECONNECT)
+		test ${line[1]} == "211" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSLINKINFO)
+		test ${line[1]} == "212" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSCOMMANDS)
+		test ${line[1]} == "213" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSCLINE)
+		test ${line[1]} == "214" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info. Depreciated (RPL_STATSNLINE, also known as RPL_STATSOLDNLINE)
+		test ${line[1]} == "215" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSILINE)
+		test ${line[1]} == "216" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSKLINE)
+		test ${line[1]} == "217" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSPLINE, also RPL_STATSPLINE in ircu)
+		test ${line[1]} == "218" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSYLINE)
+		test ${line[1]} == "219" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_ENDOFSTATS)
+		test ${line[1]} == "220" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Hybrid only. Stats info (RPL_STATSPLINE)
+		test ${line[1]} == "221" && echo "Your usermodes: `echo $rawline | substring-2`" # RFC 1459 compliance. Replies with your usermodes. (RPL_UMODEIS)
+		test ${line[1]} == "222" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Stats crap
+		test ${line[1]} == "223" && echo "STATS/SERVER: `echo $rawline | substring-2`" # More stats crap
+		test ${line[1]} == "224" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Even more stats crap
+		test ${line[1]} == "225" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Exorbitant amounts of even more stats crap
+		test ${line[1]} == "226" && echo "STATS/SERVER: `echo $rawline | substring-2`" # STATS
+		test ${line[1]} == "227" && echo "STATS/SERVER: `echo $rawline | substring-2`" # TOTALLY NOT STATS
+		test ${line[1]} == "228" && echo "STATS/SERVER: `echo $rawline | substring-2`" # JUST KIDDING, IT'S MORE STATS. None of this crap is referenced anywhere in the RFC by the way.
+		test ${line[1]} == "231" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_SERVICEINFO)
+		test ${line[1]} == "232" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_ENDOFSERVICES)
+		test ${line[1]} == "261" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACELOG)
+		test ${line[1]} == "307" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "310" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "311" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "312" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "317" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "318" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
+		test ${line[1]} == "338" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unable to send to channel
 
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
