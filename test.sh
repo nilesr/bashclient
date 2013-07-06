@@ -89,7 +89,25 @@ function connectionloop {
 		test ${line[1]} == "227" && echo "STATS/SERVER: `echo $rawline | substring-2`" # TOTALLY NOT STATS
 		test ${line[1]} == "228" && echo "STATS/SERVER: `echo $rawline | substring-2`" # JUST KIDDING, IT'S MORE STATS. None of this crap is referenced anywhere in the RFC by the way.
 		test ${line[1]} == "231" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_SERVICEINFO)
-		test ${line[1]} == "232" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_ENDOFSERVICES)
+		test ${line[1]} == "232" && ( echo "SERVER: `echo $rawline | substring-2`"; echo "WARNING: On servers running unreal, this may also be the rules, as unreal ignores RFC 1459 and uses RPL_RULES instead of RPL_ENDOFSERVICES" ) # RFC 1459 compliance. (RPL_ENDOFSERVICES)
+		test ${line[1]} == "233" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_SERVICE)
+		test ${line[1]} == "234" && echo "SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. (RPL_SERVLIST)
+		test ${line[1]} == "235" && echo "SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. (RPL_SERVLISTEND)
+		test ${line[1]} == "236" && echo "STATS/SERVER: `echo $rawline | substring-2`" # ircu only. (RPL_STATSVERBOSE)
+		test ${line[1]} == "237" && echo "STATS/SERVER: `echo $rawline | substring-2`" # ircu only. (RPL_STATSENGINE)
+		test ${line[1]} == "238" && echo "STATS/SERVER: `echo $rawline | substring-2`" # ircu only. (RPL_STATSFLINE)
+		test ${line[1]} == "239" && echo "STATS/SERVER: `echo $rawline | substring-2`" # IRCnet only. (RPL_STATSIAUTH)
+		test ${line[1]} == "240" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 2812 says this should be RPL_STATSVLINE, AustHex says fuck your shit RFC 2812, I'm using RPL_STATSXLINE
+		test ${line[1]} == "241" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSLLINE)
+		test ${line[1]} == "242" && echo "STATS/SERVER: `echo $rawline | substring-2 | cut -c 2-`" # RFC 1459 compliance. Stats info (RPL_STATSUPTIME)
+		test ${line[1]} == "243" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSOLINE)
+		test ${line[1]} == "244" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSHLINE)
+		test ${line[1]} == "245" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Bahamut, IRCnet, and Hybrid only. Stats info (RPL_STATSHLINE)
+		test ${line[1]} == "246" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. Stats info (RPL_STATSPING). ircu uses this as RPL_STATSTLINE and Hybrid uses this as RPL_STATSULINE
+		test ${line[1]} == "247" && echo "STATS/SERVER: `echo $rawline | substring-2`" # I don't feel like dealing with this shit
+		test ${line[1]} == "248" && echo "STATS/SERVER: `echo $rawline | substring-2`" # I don't feel like dealing with this shit
+		test ${line[1]} == "249" && echo "STATS/SERVER: `echo $rawline | substring-2`" # I don't feel like dealing with this shit
+		test ${line[1]} == "250" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. Stats info (RPL_STATSDLINE) ircu and Unreal use RPL_STATSCONN
 		test ${line[1]} == "261" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACELOG)
 		test ${line[1]} == "307" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "310" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
