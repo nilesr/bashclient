@@ -2,11 +2,11 @@
 #
 # Requires bash 4.0 or later due to switch fallthroughs
 function quit {
-	test -n "${command[2]}" || echo "QUIT :User closed the connection" >&3
+	test -n "$1" || echo "QUIT :User closed the connection" >&3
 	echo "QUIT :`echo $rawcommand | substring-2`" >&3
 }
 function closeprogram {
-	( quit &
+	( quit "nonzero string" &
 	sleep 2
 	test -s client.pid && kill `cat $CONFDIR/client.pid`
 	rm $CONFDIR/client.pid
