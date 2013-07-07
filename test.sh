@@ -6,7 +6,7 @@ function quit {
 	echo "QUIT :`echo $rawcommand | substring-2`" >&3
 }
 function closeprogram {
-	( quit "nonzero string" &
+	( quit "nonzero string" &>/dev/null
 	sleep 2
 	test -s client.pid && kill `cat $CONFDIR/client.pid`
 	rm $CONFDIR/client.pid
@@ -30,7 +30,7 @@ function substring-3 {
 function substring-4 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$4))}'; toparse=
 }
-function substring-4 {
+function substring-5 {
 	read toparse; echo $toparse | awk '{print substr($0, index($0,$5))}'; toparse=
 }
 function ctcp {
@@ -56,6 +56,7 @@ function connectionloop {
 	# Server output loop
 	while read rawline; do
 		line=
+		#rawline=`echo $rawline | sed 's/*//g'`
 		echo "$rawline" | tee -a $CONFDIR/client.log &> /dev/null
 		line=( $rawline )
 		test -n "${line[0]}" || continue # If the server sends an empty line, ignore the line
@@ -66,55 +67,68 @@ function connectionloop {
 		test ${line[1]} == "005" && ( test ${line[2]} == ":Try" && ( quit; connect ${line[4]} ${line[6]} ) ) # RFC 2812 compliance. Server redirect (RPL_BOUNCE).
 		test ${line[1]} == "010" && ( quit; connect ${line[2]} ${line[3]} ) # Server redirect (Incidentally also RPL_BOUNCE. Also known as RPL_REDIR).
 		test ${line[1]} == "043" && echo "That nick is already in use. Your nickname has been changed. SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RPL_SAVENICK
-		test ${line[1]} == "200" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACELINK)
-		test ${line[1]} == "201" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACECONNECTING)
-		test ${line[1]} == "202" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEHANDSHAKE)
-		test ${line[1]} == "203" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEUNKNOWN)
-		test ${line[1]} == "204" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEOPERATOR)
-		test ${line[1]} == "205" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACEUSER)
-		test ${line[1]} == "206" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACESERVER)
-		test ${line[1]} == "208" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACENEWTYPE)
-		test ${line[1]} == "209" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 2182 compliance. Trace info (RPL_TRACECLASS)
-		test ${line[1]} == "210" && ( echo "TRACE/SERVER: `echo $rawline | substring-2`"; echo "WARNING: This may be incorrect. Servers running aircd use RPL_STATS instead of RPL_TRACERECONNECT, against RFC 2182." ) # RFC 2182 compliance. Trace info (RPL_TRACERECONNECT)
-		test ${line[1]} == "211" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSLINKINFO)
-		test ${line[1]} == "212" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSCOMMANDS)
-		test ${line[1]} == "213" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSCLINE)
-		test ${line[1]} == "214" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info. Depreciated (RPL_STATSNLINE, also known as RPL_STATSOLDNLINE)
-		test ${line[1]} == "215" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSILINE)
-		test ${line[1]} == "216" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSKLINE)
-		test ${line[1]} == "217" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSPLINE, also RPL_STATSPLINE in ircu)
-		test ${line[1]} == "218" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSYLINE)
-		test ${line[1]} == "219" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_ENDOFSTATS)
-		test ${line[1]} == "220" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Hybrid only. Stats info (RPL_STATSPLINE)
-		test ${line[1]} == "221" && echo "Your usermodes: `echo $rawline | substring-2`" # RFC 1459 compliance. Replies with your usermodes. (RPL_UMODEIS)
-		test ${line[1]} == "222" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Stats crap
-		test ${line[1]} == "223" && echo "STATS/SERVER: `echo $rawline | substring-2`" # More stats crap
-		test ${line[1]} == "224" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Even more stats crap
-		test ${line[1]} == "225" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Exorbitant amounts of even more stats crap
-		test ${line[1]} == "226" && echo "STATS/SERVER: `echo $rawline | substring-2`" # STATS
-		test ${line[1]} == "227" && echo "STATS/SERVER: `echo $rawline | substring-2`" # TOTALLY NOT STATS
-		test ${line[1]} == "228" && echo "STATS/SERVER: `echo $rawline | substring-2`" # JUST KIDDING, IT'S MORE STATS. None of this crap is referenced anywhere in the RFC by the way.
-		test ${line[1]} == "231" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_SERVICEINFO)
-		test ${line[1]} == "232" && ( echo "SERVER: `echo $rawline | substring-2`"; echo "WARNING: On servers running unreal, this may also be the rules, as unreal ignores RFC 1459 and uses RPL_RULES instead of RPL_ENDOFSERVICES" ) # RFC 1459 compliance. (RPL_ENDOFSERVICES)
-		test ${line[1]} == "233" && echo "SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. (RPL_SERVICE)
-		test ${line[1]} == "234" && echo "SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. (RPL_SERVLIST)
-		test ${line[1]} == "235" && echo "SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. (RPL_SERVLISTEND)
-		test ${line[1]} == "236" && echo "STATS/SERVER: `echo $rawline | substring-2`" # ircu only. (RPL_STATSVERBOSE)
-		test ${line[1]} == "237" && echo "STATS/SERVER: `echo $rawline | substring-2`" # ircu only. (RPL_STATSENGINE)
-		test ${line[1]} == "238" && echo "STATS/SERVER: `echo $rawline | substring-2`" # ircu only. (RPL_STATSFLINE)
-		test ${line[1]} == "239" && echo "STATS/SERVER: `echo $rawline | substring-2`" # IRCnet only. (RPL_STATSIAUTH)
-		test ${line[1]} == "240" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 2812 says this should be RPL_STATSVLINE, AustHex says fuck your shit RFC 2812, I'm using RPL_STATSXLINE
-		test ${line[1]} == "241" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSLLINE)
-		test ${line[1]} == "242" && echo "STATS/SERVER: `echo $rawline | substring-2 | cut -c 2-`" # RFC 1459 compliance. Stats info (RPL_STATSUPTIME)
-		test ${line[1]} == "243" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSOLINE)
-		test ${line[1]} == "244" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Stats info (RPL_STATSHLINE)
-		test ${line[1]} == "245" && echo "STATS/SERVER: `echo $rawline | substring-2`" # Bahamut, IRCnet, and Hybrid only. Stats info (RPL_STATSHLINE)
-		test ${line[1]} == "246" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. Stats info (RPL_STATSPING). ircu uses this as RPL_STATSTLINE and Hybrid uses this as RPL_STATSULINE
-		test ${line[1]} == "247" && echo "STATS/SERVER: `echo $rawline | substring-2`" # I don't feel like dealing with this shit
-		test ${line[1]} == "248" && echo "STATS/SERVER: `echo $rawline | substring-2`" # I don't feel like dealing with this shit
-		test ${line[1]} == "249" && echo "STATS/SERVER: `echo $rawline | substring-2`" # I don't feel like dealing with this shit
-		test ${line[1]} == "250" && echo "STATS/SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. Stats info (RPL_STATSDLINE) ircu and Unreal use RPL_STATSCONN
-		test ${line[1]} == "261" && echo "TRACE/SERVER: `echo $rawline | substring-2`" # RFC 1459 compliance. Trace info (RPL_TRACELOG)
+		test ${line[1]} == "200" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACELINK)
+		test ${line[1]} == "201" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACECONNECTING)
+		test ${line[1]} == "202" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACEHANDSHAKE)
+		test ${line[1]} == "203" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACEUNKNOWN)
+		test ${line[1]} == "204" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACEOPERATOR)
+		test ${line[1]} == "205" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACEUSER)
+		test ${line[1]} == "206" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACESERVER)
+		test ${line[1]} == "208" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACENEWTYPE)
+		test ${line[1]} == "209" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 2182 compliance. Trace info (RPL_TRACECLASS)
+		test ${line[1]} == "210" && ( echo "TRACE/SERVER: `echo $rawline | substring-4`"; echo "WARNING: This may be incorrect. Servers running aircd use RPL_STATS instead of RPL_TRACERECONNECT, against RFC 2182." ) # RFC 2182 compliance. Trace info (RPL_TRACERECONNECT)
+		test ${line[1]} == "211" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSLINKINFO)
+		test ${line[1]} == "212" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSCOMMANDS)
+		test ${line[1]} == "213" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSCLINE)
+		test ${line[1]} == "214" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info. Depreciated (RPL_STATSNLINE, also known as RPL_STATSOLDNLINE)
+		test ${line[1]} == "215" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSILINE)
+		test ${line[1]} == "216" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSKLINE)
+		test ${line[1]} == "217" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSPLINE, also RPL_STATSPLINE in ircu)
+		test ${line[1]} == "218" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSYLINE)
+		test ${line[1]} == "219" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_ENDOFSTATS)
+		test ${line[1]} == "220" && echo "STATS/SERVER: `echo $rawline | substring-4`" # Hybrid only. Stats info (RPL_STATSPLINE)
+		test ${line[1]} == "221" && echo "Your usermodes: `echo $rawline | substring-4`" # RFC 1459 compliance. Replies with your usermodes. (RPL_UMODEIS)
+		test ${line[1]} == "222" && echo "STATS/SERVER: `echo $rawline | substring-4`" # Stats crap
+		test ${line[1]} == "223" && echo "STATS/SERVER: `echo $rawline | substring-4`" # More stats crap
+		test ${line[1]} == "224" && echo "STATS/SERVER: `echo $rawline | substring-4`" # Even more stats crap
+		test ${line[1]} == "225" && echo "STATS/SERVER: `echo $rawline | substring-4`" # Exorbitant amounts of even more stats crap
+		test ${line[1]} == "226" && echo "STATS/SERVER: `echo $rawline | substring-4`" # STATS
+		test ${line[1]} == "227" && echo "STATS/SERVER: `echo $rawline | substring-4`" # TOTALLY NOT STATS
+		test ${line[1]} == "228" && echo "STATS/SERVER: `echo $rawline | substring-4`" # JUST KIDDING, IT'S MORE STATS. None of this crap is referenced anywhere in the RFC by the way.
+		test ${line[1]} == "231" && echo "SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. (RPL_SERVICEINFO)
+		test ${line[1]} == "232" && ( echo "SERVER: `echo $rawline | substring-4`"; echo "WARNING: On servers running unreal, this may also be the rules, as unreal ignores RFC 1459 and uses RPL_RULES instead of RPL_ENDOFSERVICES" ) # RFC 1459 compliance. (RPL_ENDOFSERVICES)
+		test ${line[1]} == "233" && echo "SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. (RPL_SERVICE)
+		test ${line[1]} == "234" && echo "SERVER: `echo $rawline | substring-4`" # RFC 2812 compliance. (RPL_SERVLIST)
+		test ${line[1]} == "235" && echo "SERVER: `echo $rawline | substring-4`" # RFC 2812 compliance. (RPL_SERVLISTEND)
+		test ${line[1]} == "236" && echo "STATS/SERVER: `echo $rawline | substring-4`" # ircu only. (RPL_STATSVERBOSE)
+		test ${line[1]} == "237" && echo "STATS/SERVER: `echo $rawline | substring-4`" # ircu only. (RPL_STATSENGINE)
+		test ${line[1]} == "238" && echo "STATS/SERVER: `echo $rawline | substring-4`" # ircu only. (RPL_STATSFLINE)
+		test ${line[1]} == "239" && echo "STATS/SERVER: `echo $rawline | substring-4`" # IRCnet only. (RPL_STATSIAUTH)
+		test ${line[1]} == "240" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 2812 says this should be RPL_STATSVLINE, AustHex says fuck your shit RFC 2812, I'm using RPL_STATSXLINE
+		test ${line[1]} == "241" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSLLINE)
+		test ${line[1]} == "242" && echo "STATS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. Stats info (RPL_STATSUPTIME)
+		test ${line[1]} == "243" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSOLINE)
+		test ${line[1]} == "244" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Stats info (RPL_STATSHLINE)
+		test ${line[1]} == "245" && echo "STATS/SERVER: `echo $rawline | substring-4`" # Bahamut, IRCnet, and Hybrid only. Stats info (RPL_STATSHLINE)
+		test ${line[1]} == "246" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 2812 compliance. Stats info (RPL_STATSPING). ircu uses this as RPL_STATSTLINE and Hybrid uses this as RPL_STATSULINE
+		test ${line[1]} == "247" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
+		test ${line[1]} == "248" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
+		test ${line[1]} == "249" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
+		test ${line[1]} == "250" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 2812 compliance. Stats info (RPL_STATSDLINE) ircu and Unreal use RPL_STATSCONN
+		test ${line[1]} == "251" && echo "LUSERS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERCLIENT)
+		test ${line[1]} == "252" && echo "There are ${line[2]} operators online. LUSERS/SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSEROP)
+		test ${line[1]} == "253" && echo "There are ${line[2]} unknown or unregistered connections. LUSERS/SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERUNKNOWN)
+		test ${line[1]} == "254" && echo "There are ${line[2]} channels formed. LUSERS/SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERCHANNELS)
+		test ${line[1]} == "255" && echo "LUSERS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERME)
+		test ${line[1]} == "256" && echo "ADMIN/SERVER: `echo ${line[3]}`: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. Admin info (RPL_ADMINME)
+		test ${line[1]} == "257" && echo "ADMIN/SERVER: location: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. Admin info (RPL_ADMINLOC1)
+		test ${line[1]} == "258" && echo "ADMIN/SERVER: location: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. Admin info (RPL_ADMINLOC2)
+		test ${line[1]} == "259" && echo "ADMIN/SERVER: email address: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. Admin (RPL_ADMINEMAIL)
+		test ${line[1]} == "261" && echo "TRACE/SERVER: `echo $rawline | substring-4`" # RFC 1459 compliance. Trace info (RPL_TRACELOG)
+		test ${line[1]} == "262" && echo "TRACE/SERVER: `echo $rawline | substring-4 | sed 's/://g'`" # RFC 2812 compliance. Trace info (RPL_TRACEEND)
+		test ${line[1]} == "263" && echo "Server dropped the command without executing it. ERROR/SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. When a server drops a command without processing it, it MUST use this reply. (RPL_TRYAGAIN aka RPL_LOAD_THROTTLED or RPL_LOAD2HI)
+#		test ${line[1]} == "265" && echo "SERVER: `echo $rawline | substring-3
+
 		test ${line[1]} == "307" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "310" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "311" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
@@ -124,7 +138,7 @@ function connectionloop {
 		test ${line[1]} == "338" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unable to send to channel
 
-		test ${line[1]} == "421" && echo "SERVER: `echo $rawline | substring-4`" # Unknown command
+		test ${line[1]} == "433" && echo "Nickname already in use. ERROR/SERVER: `echo $rawline | substring-4`" # Nick already in use
 		test ${line[1]} == "461" && echo "SERVER: `echo $rawline | substring-4`" # Not enough parameters
 		test ${line[1]} == "524" && echo "SERVER: `echo $rawline | substring-4`" # Help section unavailable
 		test ${line[1]} == "713" && echo "SERVER: `echo $rawline | substring-4`" # Cannot knock, channel is open
@@ -133,7 +147,7 @@ function connectionloop {
 		test -n "${line[2]}" || continue # Returns false if there is no third argument. If it returns false, ignore the rest of the loop
 		test -n "${line[3]}" || continue # Returns false if there is no fourth argument. If it returns false, ignore the rest of the loop
 		nicktodisplay=`echo ${line[0]} | sed 's/![^!]*$//' | cut -c 2-`
-		privmsgtolog=`echo $rawline | substring-4 | cut -c 2-`
+		privmsgtolog=`echo $rawline | substring-4`
 		echo "${line[3]}" | grep -F $'\001' && ( ctcp "`echo $rawline | substring-4`"; exit 0 ) && continue
 		test ${line[1]} == "PRIVMSG" && echo ${line[2]}" <$nicktodisplay> $privmsgtolog" # Displays a message
 		test ${line[1]} == "NOTICE" && echo ${line[2]}" <notice/$nicktodisplay> $privmsgtolog" # Displays a notice
@@ -585,6 +599,7 @@ while true; do
 		ctcp) ;&
 		sendctcp)
 			echo "PRIVMSG ${command[1]} :`echo -n $soh``echo $rawcommand | substring-3``echo -n $soh`" >&3
+			;;
 		*)
 			echo $rawcommand | cut -c 2- >&3
 			;;
