@@ -116,9 +116,9 @@ function connectionloop {
 		test ${line[1]} == "249" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
 		test ${line[1]} == "250" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 2812 compliance. Stats info (RPL_STATSDLINE) ircu and Unreal use RPL_STATSCONN
 		test ${line[1]} == "251" && echo "LUSERS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERCLIENT)
-		test ${line[1]} == "252" && echo "There are ${line[2]} operators online. LUSERS/SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSEROP)
-		test ${line[1]} == "253" && echo "There are ${line[2]} unknown or unregistered connections. LUSERS/SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERUNKNOWN)
-		test ${line[1]} == "254" && echo "There are ${line[2]} channels formed. LUSERS/SERVER: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERCHANNELS)
+		test ${line[1]} == "252" && echo "There are ${line[3]} operators online. LUSERS/SERVER: `echo $rawline | substring-5 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSEROP)
+		test ${line[1]} == "253" && echo "There are ${line[3]} unknown or unregistered connections. LUSERS/SERVER: `echo $rawline | substring-5 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERUNKNOWN)
+		test ${line[1]} == "254" && echo "There are ${line[3]} channels formed. LUSERS/SERVER: `echo $rawline | substring-5 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERCHANNELS)
 		test ${line[1]} == "255" && echo "LUSERS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERME)
 		test ${line[1]} == "256" && echo "ADMIN/SERVER: `echo ${line[3]}`: `echo $rawline | substring-3 | cut -c 2-`" # RFC 1459 compliance. Admin info (RPL_ADMINME)
 		test ${line[1]} == "257" && echo "ADMIN/SERVER: location: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. Admin info (RPL_ADMINLOC1)
