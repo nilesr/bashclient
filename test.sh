@@ -40,11 +40,27 @@ function ctcp {
 	echo "Recieved CTCP $ctcpall from $nicktodisplay"
 	case ctcpcommand in
 		VERSION)
-			echo "PRIVMSG $nicktodisplay :`echo -n $soh`VERSION BashClient:Alpha:`uname -v``echo -n $soh`" >&3
+			echo "NOTICE $nicktodisplay :`echo -n $soh`VERSION BashClient:Alpha:`uname -v``echo -n $soh`" >&3
 			;;
 		SOURCE)
 			echo "PRIVMSG $nicktodisplay :`echo -n $soh`SOURCE niles.mooo.com:/:test.sh`echo -n $soh`" >&3
 			echo "PRIVMSG $nicktodisplay :`echo -n $soh`SOURCE`echo -n $soh`" >&3
+			;;
+		DCC)
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`DCC is not yet a feature of this client, though it is planned`echo -n $soh`" >&3
+			;;
+		SED)
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`SED is not yet a feature of this client, though it is planned`echo -n $soh`" >&3
+			;;
+		FINGER)
+			echo "NOTICE $nicktodisplay :`echo -n $soh`FINGER :`echo $'\000'`$realname`echo $'\000'` `echo $'\002'`$USER`echo $'\002'` `echo $'\003'`Idle time is not currently recorded by this client, but it is a planned feature`echo $'\003'``echo -n $soh`" >&3
+			;;
+		USERINFO)
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`USERINFO :`echo -n $soh`" >&3
+			;;
+		CLIENTINFO)
+			echo "PRIVMSG $nicktodisplay :`echo -n $soh`CLIENTINFO is not yet implemented on this client`echo -n $soh`" >&3
+			;;
 	esac
 	ctcpcommand=
 	ctcpall=
@@ -114,7 +130,7 @@ function connectionloop {
 		test ${line[1]} == "247" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
 		test ${line[1]} == "248" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
 		test ${line[1]} == "249" && echo "STATS/SERVER: `echo $rawline | substring-4`" # I don't feel like dealing with this shit
-		test ${line[1]} == "250" && echo "STATS/SERVER: `echo $rawline | substring-4`" # RFC 2812 compliance. Stats info (RPL_STATSDLINE) ircu and Unreal use RPL_STATSCONN
+		test ${line[1]} == "250" && echo "STATS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 2812 compliance. Stats info (RPL_STATSDLINE) ircu and Unreal use RPL_STATSCONN
 		test ${line[1]} == "251" && echo "LUSERS/SERVER: `echo $rawline | substring-4 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERCLIENT)
 		test ${line[1]} == "252" && echo "There are ${line[3]} operators online. LUSERS/SERVER: `echo $rawline | substring-5 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSEROP)
 		test ${line[1]} == "253" && echo "There are ${line[3]} unknown or unregistered connections. LUSERS/SERVER: `echo $rawline | substring-5 | cut -c 2-`" # RFC 1459 compliance. List users info (RPL_LUSERUNKNOWN)
