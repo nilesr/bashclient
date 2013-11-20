@@ -144,7 +144,7 @@ function connectionloop {
 		test ${line[1]} == "262" && echo "TRACE/SERVER: `echo $rawline | substring-4 | sed 's/://g'`" # RFC 2812 compliance. Trace info (RPL_TRACEEND)
 		test ${line[1]} == "263" && echo "Server dropped the command without executing it. ERROR/SERVER: `echo $rawline | substring-2`" # RFC 2812 compliance. When a server drops a command without processing it, it MUST use this reply. (RPL_TRYAGAIN aka RPL_LOAD_THROTTLED or RPL_LOAD2HI)
 #		test ${line[1]} == "265" && echo "SERVER: `echo $rawline | substring-3
-
+#I'll finish this crap later
 		test ${line[1]} == "307" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "310" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
 		test ${line[1]} == "311" && echo "WHOIS/SERVER: `echo $rawline | substring-4`" # WHOIS info
@@ -192,7 +192,7 @@ function sendmessage {
 }
 function privmsg {
 	test -n "${command[1]}" || echo -n "USAGE: /msg <nickname>. "
-	test -n "${command[2]}" || echo -n "You tried to send a blank message" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | substring-3`" >&3
+	test -n "${command[2]}" && echo "PRIVMSG `echo ${command[1]}` :`echo $rawcommand | substring-3`" || echo -n "You tried to send a blank message" >&3
 }
 function joinchannel {
 	test -n "$2" || chanpass=$2
